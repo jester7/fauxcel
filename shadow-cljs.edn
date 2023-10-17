@@ -5,6 +5,8 @@
  :builds       {:app {:target     :browser
                       :output-dir "public/js"
                       :asset-path "/js"
+                      :build-options
+                      {:cache-level :jars}
                       :modules    {:app {:entries [fauxcel.core]}}
                       :devtools   {:after-load fauxcel.core/mount-root}}}
 
