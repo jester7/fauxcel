@@ -28,6 +28,7 @@ h3 {
 }
 
 .toolbar {
+  position: sticky;
   display: flex;
   flex-direction: row;
 }
@@ -80,4 +81,69 @@ h3 {
 .toolbar .toolbar-item a:hover {
   border: 1px solid var(--highlight);
   border-radius: 0.25em;
+}
+
+
+
+.cellgrid {
+  overflow:scroll;
+}
+
+.cellgrid .row.wrapper:first-child {
+  /* position: sticky;
+  left:0;
+  top:0; */
+}
+
+
+.cellgrid .row.wrapper:first-child span:first-child {
+  color:var(--cell-label-bg);
+  z-index: 100;
+
+}
+
+.cellgrid .row.wrapper {
+  float:left;
+  clear:both;
+  display: flex;
+  padding:0;
+  margin:0;
+}
+
+.cellgrid .row.wrapper .row-label {
+  text-align:right;
+  width:2em;
+  display: block;
+  flex-shrink: 0;
+  padding:0.25em 0.2em 0.25em 0em;
+  background-color:var(--cell-label-bg);
+  border:1px solid var(--highlight);
+  position:sticky;
+  left:0;
+}
+
+.cellgrid .row.wrapper .col-label {
+  text-align:right;
+  display: block;
+  width:var(--cell-max-width);
+  border:1px solid var(--highlight);
+  font-family: courier-prime, monospace;
+  font-size:1em;
+  flex-shrink: 0;
+  padding:0.25em;
+  background-color:var(--cell-label-bg)
+
+}
+
+.cellgrid .row.wrapper input {
+  border-radius:0;
+  float:left;
+  width:var(--cell-max-width);
+  height:1em;
+  font-size:1em;
+  padding:0.25em;
+}
+
+.cellgrid .row.wrapper input.selected {
+  background-color:var(--button-bg-color);
 }
