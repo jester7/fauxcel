@@ -2,6 +2,7 @@
   (:require
    [reagent.core :as r]
    [reagent.ratom]
+   [fauxcel.base.state :as state :refer [cells-map current-selection current-formula]]
    [fauxcel.util.dom :as dom :refer [$]]))
 
 ;; ---------------------------------------------
@@ -11,10 +12,6 @@
 (def ^:const cells-parent-selector ".cellgrid.wrapper")
 (def ^:const max-cols 27)
 (def ^:const max-rows 101)
-
-(def cells-map (r/atom {}))
-(def current-selection (r/atom ""))
-(def current-formula (r/atom ""))
 
 (defn is-formula? [str]
   (= (get str 0) "="))
