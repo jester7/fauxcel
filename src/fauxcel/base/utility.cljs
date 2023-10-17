@@ -24,14 +24,14 @@
 (defn el-by-cell-ref [cell-ref]
   (querySelector (str "#" cell-ref)))
 
-(defn changed! [cell-el]
-  (set! (-> cell-el .-dataset .-changed) true))
+(defn changed! [^js/HTMLElement cell-el]
+  (set! (.-changed (.-dataset cell-el)) true))
 
-(defn not-changed! [cell-el]
-  (set! (-> cell-el .-dataset .-changed) false))
+(defn not-changed! [^js/HTMLElement cell-el]
+  (set! (.-changed (.-dataset cell-el)) false))
 
-(defn changed? [cell-el]
-  (-> cell-el .-dataset .-changed))
+(defn changed? [^js/HTMLElement cell-el]
+  (.-changed (.-dataset cell-el)))
 
 
 
@@ -65,7 +65,7 @@
 (defn selection-cell-ref []
   (querySelector (str cells-parent-selector " input.selected")))
 
-(defn row-col-for-el [el]
+(defn row-col-for-el [^js/HTMLElement el]
   {:row (js/parseInt (-> el .-dataset .-row))
    :col (js/parseInt (-> el .-dataset .-col))})
 
@@ -77,7 +77,7 @@
   (for [col (range 1 max-cols)]
     [:span.col-label {:key (str "col-label-" (char (+ col 64)))} (char (+ col 64))]))
 
-(defn cell-ref-for-input [input-el]
+(defn cell-ref-for-input [^js/HTMLElement input-el]
   (cell-ref (js/parseInt (-> input-el .-dataset .-row)) (js/parseInt (-> input-el .-dataset .-col))))
 
 (defn cell-data-for
@@ -162,7 +162,7 @@
                  ;(.focus curr-cell)
          )))})
 
-(defn handle-cell-blur [cell-el parser]
+(defn handle-cell-blur [^js/HTMLElement cell-el parser]
     (when (changed? cell-el)
       (set! (-> cell-el .-readOnly) true) ; set back to readonly
       (let [val (-> cell-el .-value)
