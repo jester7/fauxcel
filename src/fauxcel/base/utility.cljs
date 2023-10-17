@@ -8,7 +8,7 @@
 ;; copied from my ClojureScript7 project
 ;; ---------------------------------------------
 
-(def ^:const cells-parent-id "spreadsheet")
+(def ^:const cells-parent-selector ".cellgrid.wrapper")
 (def ^:const max-cols 27)
 (def ^:const max-rows 101)
 
@@ -48,7 +48,7 @@
   ([cell-ref] (scroll-to-cell cell-ref false true)) ; default just scroll, no range check, smooth yes
   ([cell-ref check-if-out-of-range?] (scroll-to-cell cell-ref check-if-out-of-range? true))
   ([cell-ref check-if-out-of-range? smooth-scroll?]
-   (let [parent-el ($ (str "#" cells-parent-id))
+   (let [parent-el ($ cells-parent-selector)
          child-el (el-by-cell-ref cell-ref)
          child-offset-l (-> child-el .-offsetLeft)
          child-offset-t (-> child-el .-offsetTop)
@@ -66,7 +66,7 @@
        (.scrollTo parent-el (clj->js scroll-to-info))))))
 
 (defn selection-cell-ref []
-  ($ (str "#" cells-parent-id " input.selected")))
+  ($ (str cells-parent-selector " input.selected")))
 
 (defn row-col-for-el [el]
   {:row (js/parseInt (-> el .-dataset .-row))
