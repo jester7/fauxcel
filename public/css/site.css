@@ -1,17 +1,20 @@
 body {
-  font-family: 'Helvetica Neue', Verdana, Helvetica, Arial, sans-serif;
-  max-width: 600px;
-  margin: 0 auto;
-  padding-top: 72px;
-  -webkit-font-smoothing: antialiased;
-  font-size: 1.125em;
-  color: #333;
-  line-height: 1.5em;
+  font-family: mr-eaves-xl-modern, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 16px;
 }
 
-h1, h2, h3 {
+.dark-bg {
+  background-color: var(--dark-bg-color)
+}
+
+h1,
+h2,
+h3 {
   color: #000;
 }
+
 h1 {
   font-size: 2.5em
 }
@@ -24,11 +27,57 @@ h3 {
   font-size: 1.5em
 }
 
-a {
-  text-decoration: none;
-  color: #09f;
+.toolbar {
+  display: flex;
+  flex-direction: row;
 }
 
-a:hover {
-  text-decoration: underline;
+.toolbar .toolbar-item .app-name {
+  font-family: mr-eaves-xl-modern, sans-serif;
+  font-weight: 900;
+  font-style: normal;
+  font-size: 1.5em;
+  padding-right: 1em;
+  color: var(--glaucous);
+  vertical-align: middle;
+}
+
+.toolbar .toolbar-item {
+  font-family: mr-eaves-xl-modern, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  padding: 0.5em 1em;
+  color: var(--button-text);
+  vertical-align: middle;
+}
+
+.formula-input .toolbar-label {
+  font-family: courier-prime, monospace;
+  font-weight: 700;
+  font-style: normal;
+  padding-right:0.5em;
+  font-size:1em;
+}
+
+.toolbar .toolbar-item input.formula-input {
+  font-size:1em;
+  font-family: courier-prime, monospace;
+  font-weight: 400;
+  font-style: normal;
+  color: black;
+  background-color: var(--highlight);
+  border: 1px solid var(--highlight);
+  padding: 0.25em 0.5em;
+  border-radius: 0.25em;
+}
+
+.toolbar .toolbar-item a {
+  color: var(--button-text);
+  border: 1px solid #00000000;
+  padding: 0.25em 0.5em;
+}
+
+.toolbar .toolbar-item a:hover {
+  border: 1px solid var(--highlight);
+  border-radius: 0.25em;
 }

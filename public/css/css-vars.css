@@ -1,0 +1,21 @@
+:root {
+  --licorice: #151118ff;
+  --glaucous: #7776bcff;
+  --earth-yellow: #db9d47ff;
+  --dark-moss-green: #535936ff;
+  --honeydew: #e2f3ebff;
+
+  --dark-bg-color: var(--licorice);
+  --highlight: var(--honeydew);
+  --button-text: var(--earth-yellow);
+  --button-bg-color: #6645d6;
+  --button-bg-active: #6040d1;
+  --button-bg-disabled: #515261;
+
+
+  --select-border: var(--highlight);
+  --select-focus: var(--button-bg-active);
+  --select-arrow: var(--select-border);
+  --cell-max-width: 5em;
+  --cell-label-bg: #373847;
+}
