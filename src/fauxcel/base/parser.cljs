@@ -8,7 +8,7 @@
 
 ;; ---------------------------------------------
 ;; copied from my ClojureScript7 project
-;; TODO - define regular expressions for tokenizing dynamically
+;; TODO - define regular expressions for tokenizing functions dynamically,
 ;;        right now they are hard-coded in the tokenize-re regex
 ;; ---------------------------------------------
 
