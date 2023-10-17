@@ -10,10 +10,10 @@
 ;;    because I was still figuring out how to use reagent at the time
 ;; ---------------------------------------------
 
-(defn $ [selector]
+(defn querySelector [selector]
   (js/document.querySelector selector))
 
-(defn $$ [selector]
+(defn querySelectorAll [selector]
   (array-seq (js/document.querySelectorAll selector)))
 
 (defn el-by-id [el-id]
@@ -88,7 +88,7 @@
   (post-animation-fn))
 
 (defn canvas-init [canvas ctx]
-  (reset! canvas ($ "#circles-canvas"))
+  (reset! canvas (querySelector "#circles-canvas"))
   (set! (.-width @canvas) (.-offsetWidth @canvas))
   (set! (.-height @canvas) (.-offsetHeight @canvas))
   (reset! ctx (.getContext @canvas "2d")))

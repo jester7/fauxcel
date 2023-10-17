@@ -3,7 +3,7 @@
    [reagent.core :as r]
    [reagent.ratom]
    [fauxcel.base.state :as state :refer [cells-map current-selection current-formula]]
-   [fauxcel.util.dom :as dom :refer [$]]))
+   [fauxcel.util.dom :as dom :refer [querySelector]]))
 
 ;; ---------------------------------------------
 ;; copied from my ClojureScript7 project
@@ -22,7 +22,7 @@
    (str (char (+ col 64)) row)))
 
 (defn el-by-cell-ref [cell-ref]
-  ($ (str "#" cell-ref)))
+  (querySelector (str "#" cell-ref)))
 
 (defn changed! [cell-el]
   (set! (-> cell-el .-dataset .-changed) true))
@@ -45,7 +45,7 @@
   ([cell-ref] (scroll-to-cell cell-ref false true)) ; default just scroll, no range check, smooth yes
   ([cell-ref check-if-out-of-range?] (scroll-to-cell cell-ref check-if-out-of-range? true))
   ([cell-ref check-if-out-of-range? smooth-scroll?]
-   (let [parent-el ($ cells-parent-selector)
+   (let [parent-el (querySelector cells-parent-selector)
          child-el (el-by-cell-ref cell-ref)
          child-offset-l (-> child-el .-offsetLeft)
          child-offset-t (-> child-el .-offsetTop)
@@ -63,7 +63,7 @@
        (.scrollTo parent-el (clj->js scroll-to-info))))))
 
 (defn selection-cell-ref []
-  ($ (str cells-parent-selector " input.selected")))
+  (querySelector (str cells-parent-selector " input.selected")))
 
 (defn row-col-for-el [el]
   {:row (js/parseInt (-> el .-dataset .-row))
@@ -115,7 +115,7 @@
 (defn update-selection!
   ([el] (update-selection! el false))
   ([el get-formula?]
-   (when (not= @current-selection "") (dom/remove-class ($ (str "#" @current-selection)) "selected"))
+   (when (not= @current-selection "") (dom/remove-class (querySelector (str "#" @current-selection)) "selected"))
    (dom/add-class-name el "selected")
    (reset! current-selection (cell-ref-for-input el))
    (.focus el)
@@ -138,22 +138,22 @@
                                 rc-new {:row (dec (:row rc)) :col (:col rc)}]
                             (when (> (:row rc) 1)
                               (scroll-to-cell (cell-ref rc-new) true)
-                              (update-selection! ($ (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
+                              (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
          "ArrowDown" (doall (let [rc (row-col-for-el curr-cell)
                                   rc-new {:row (inc (:row rc)) :col (:col rc)}]
                               (when (< (:row rc) (dec max-rows))
                                 (scroll-to-cell (cell-ref rc-new) true)
-                                (update-selection! ($ (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
+                                (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
          "ArrowLeft" (doall (let [rc (row-col-for-el curr-cell)
                                   rc-new {:row (:row rc) :col (dec (:col rc))}]
                               (when (> (:col rc) 1)
                                 (scroll-to-cell (cell-ref rc-new) true)
-                                (update-selection! ($ (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
+                                (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
          "ArrowRight" (doall (let [rc (row-col-for-el curr-cell)
                                    rc-new {:row (:row rc) :col (inc (:col rc))}]
                                (when (< (:col rc) (dec max-cols))
                                  (scroll-to-cell (cell-ref rc-new) true)
-                                 (update-selection! ($ (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
+                                 (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
          "Enter" (doall (set! (.-readOnly curr-cell) false)
                         (.focus curr-cell))
          "Escape" (js/console.log "escape")
