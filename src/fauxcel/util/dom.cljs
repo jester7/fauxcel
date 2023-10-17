@@ -34,16 +34,15 @@
     (if-not (contains-class? el class-name)
       (.setAttribute el "class" (str cur-class-name " " class-name)))))
 
-
 (defn swap-class [el from-class to-class]
-  ;([el from-class] (swap-class el from-class " "))
-  (let [cur-class-name (.getAttribute el "class")
-        classes (s/split cur-class-name #"(?i)[\s]+")] ; split class name property into vector of classes
-    (when (c/vector-contains? classes from-class)
-      (.setAttribute el "class"
-             ; remove the class to be swapped then add the new class
-             ; join classes vector with spaces again and set the className property on the element
-            (s/join " " (concat (c/remove-val-from-vector classes from-class) [to-class]))))))
+  (when el
+    (let [cur-class-name (.getAttribute el "class")
+          classes (s/split cur-class-name #"(?i)[\s]+")] ; split class name property into vector of classes
+      (when (c/vector-contains? classes from-class)
+        (.setAttribute el "class"
+               ; remove the class to be swapped then add the new class
+               ; join classes vector with spaces again and set the className property on the element
+              (s/join " " (concat (c/remove-val-from-vector classes from-class) [to-class])))))))
 
 (defn remove-class [el class]
   (swap-class el class " "))
