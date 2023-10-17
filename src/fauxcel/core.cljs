@@ -1,13 +1,17 @@
 (ns fauxcel.core
-    (:require
-      [reagent.core :as r]
-      [reagent.dom :as d]))
+  (:require
+   [reagent.core :as r]
+   [reagent.dom :as d]
+   [fauxcel.components.toolbar :refer [toolbar]]
+   [fauxcel.components.spreadsheet :refer [cellgrid]]))
 
 ;; -------------------------
 ;; Views
 
 (defn home-page []
-  [:div [:h2 "Welcome to Reagent"]])
+  [:div.wrapper
+   [toolbar]
+   [cellgrid]])
 
 ;; -------------------------
 ;; Initialize app
