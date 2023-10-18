@@ -13,3 +13,6 @@
 
 (defn positions [pred coll]
   (keep-indexed (fn [index x] (when (pred x) index)) coll))
+
+(defn sublist [l start end]
+  (drop start (drop-last (- (dec (count l)) end) l)))

@@ -34,7 +34,7 @@
 (def ^:const comma ",")
 (def ^:const multi-arity 999)
 
-; not using :arity for now, no error checking:
+; Map of string tokens to functions
 ; assumes all functions other than operators are multi-arity
 (def ^:const operators {"^" {:fn Math/pow :precedence 3 :arity 2}
                         "*" {:fn * :precedence 2 :arity 2}
@@ -91,9 +91,6 @@
                                  cell-ref-re
                                  #(str (s/join "," (expand-cell-range (%1 0)))))]
     (re-seq tokenize-re (s/upper-case (strip-whitespace expanded-refs)))))
-
-(defn sublist [l start end] ; orphaned function, no longer used: TODO move out of here or delete
-  (drop start (drop-last (- (dec (count l)) end) l)))
 
 ;;; Scans tokens for minus signs and determines if the minus sign should
 ;;; be treated as a subtraction operator or a unary negation operator.
