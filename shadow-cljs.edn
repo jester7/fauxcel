@@ -7,7 +7,10 @@
                       :asset-path "/js"
                       :build-options
                       {:cache-level :jars}
-                      :compiler-options {:optimizations :simple}
+                      :compiler-options {:optimizations :advanced 
+                                         :pretty-print  false
+                                         :source-map false
+                                         :pseudo-names false}
                       :modules    {:app {:entries [fauxcel.core]}}
                       :devtools   {:after-load fauxcel.core/mount-root}}}
 

@@ -10,10 +10,10 @@
 ;;    because I was still figuring out how to use reagent at the time
 ;; ---------------------------------------------
 
-(defn $ [selector]
+(defn querySelector [selector]
   (js/document.querySelector selector))
 
-(defn $$ [selector]
+(defn querySelectorAll [selector]
   (array-seq (js/document.querySelectorAll selector)))
 
 (defn el-by-id [el-id]
@@ -34,16 +34,15 @@
     (if-not (contains-class? el class-name)
       (.setAttribute el "class" (str cur-class-name " " class-name)))))
 
-
 (defn swap-class [el from-class to-class]
-  ;([el from-class] (swap-class el from-class " "))
-  (let [cur-class-name (.getAttribute el "class")
-        classes (s/split cur-class-name #"(?i)[\s]+")] ; split class name property into vector of classes
-    (when (c/vector-contains? classes from-class)
-      (.setAttribute el "class"
-             ; remove the class to be swapped then add the new class
-             ; join classes vector with spaces again and set the className property on the element
-            (s/join " " (concat (c/remove-val-from-vector classes from-class) [to-class]))))))
+  (when el
+    (let [cur-class-name (.getAttribute el "class")
+          classes (s/split cur-class-name #"(?i)[\s]+")] ; split class name property into vector of classes
+      (when (c/vector-contains? classes from-class)
+        (.setAttribute el "class"
+               ; remove the class to be swapped then add the new class
+               ; join classes vector with spaces again and set the className property on the element
+              (s/join " " (concat (c/remove-val-from-vector classes from-class) [to-class])))))))
 
 (defn remove-class [el class]
   (swap-class el class " "))
@@ -88,7 +87,7 @@
   (post-animation-fn))
 
 (defn canvas-init [canvas ctx]
-  (reset! canvas ($ "#circles-canvas"))
+  (reset! canvas (querySelector "#circles-canvas"))
   (set! (.-width @canvas) (.-offsetWidth @canvas))
   (set! (.-height @canvas) (.-offsetHeight @canvas))
   (reset! ctx (.getContext @canvas "2d")))
