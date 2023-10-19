@@ -18,6 +18,8 @@
    [button "💾" "Save" "save disabled" true]
    [button "📋" "Copy" "copy disabled" true]
    [button "📄" "Paste" "paste disabled" true]
+   [button "|" nil "separator" false]
+   [button " " [:a {:href "https://github.com/jester7/fauxcel"} "GitHub"] "github" false]
   ;;  [:li.toolbar-item
   ;;   [:a {:href "#"} "About"]]
   ;;  [:li.toolbar-item

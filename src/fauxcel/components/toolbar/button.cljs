@@ -17,5 +17,7 @@
    [:li.toolbar-item.button {:class classname
                       :title (when use-caption-as-tooltip? caption)}
     (when icon
-      [:span.icon icon])]))
+      [:span.icon icon])
+    (when (and caption (not use-caption-as-tooltip?))
+      [:span.caption caption])]))
 
