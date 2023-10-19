@@ -1,8 +1,7 @@
 (ns fauxcel.core
   (:require
-   [reagent.core :as r]
    [reagent.dom :as d]
-   [fauxcel.components.toolbar :refer [toolbar]]
+   [fauxcel.components.toolbar.toolbar :refer [toolbar]]
    [fauxcel.components.spreadsheet :refer [cellgrid]]))
 
 ;; -------------------------
