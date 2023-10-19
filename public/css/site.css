@@ -1,5 +1,5 @@
 body {
-  font-family: solitas-serif-normal, sans-serif;
+  font-family: solitas-serif-normal, serif;
   font-weight: 300;
   font-style: normal;
   font-size: 16px;
@@ -7,7 +7,7 @@ body {
 
 p,
 span {
-  font-family: solitas-serif-normal, sans-serif;
+  font-family: solitas-serif-normal, serif;
   font-weight: 300;
   font-style: normal;
   font-size: 1em;
@@ -111,6 +111,21 @@ h3 {
   margin: 0 0.1em;
 }
 
+.toolbar-item.button.disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.toolbar-item.button.disabled:hover {
+  opacity: 0.25;
+  background-color: transparent;
+}
+
+
+.toolbar-item.button.disabled span {
+  cursor: not-allowed;
+}
+
 .toolbar-item.button:hover {
   border: 1px solid var(--dark-color-1);
   background-color: var(--button-bg-active);
@@ -126,19 +141,19 @@ h3 {
 }
 
 .toolbar-item.button.bold span {
-  font-family: solitas-serif-normal, sans-serif;
+  font-family: solitas-serif-normal, serif;
   font-weight: 700;
   font-style: normal;
 }
 
 .toolbar-item.button.italic span {
-  font-family: solitas-serif-normal, sans-serif;
+  font-family: solitas-serif-normal, serif;
   font-weight: 300;
   font-style: italic;
 }
 
 .toolbar-item.button.underline span {
-  font-family: solitas-serif-normal, sans-serif;
+  font-family: solitas-serif-normal, serif;
   font-weight: 300;
   font-style: normal;
   text-decoration: underline;
@@ -262,4 +277,49 @@ h3 {
 
 .cellgrid .row.wrapper input.selected {
   background-color: var(--select-focus);
+}
+
+#app .wrapper {
+  position: relative;
+}
+
+#clippy {
+  background-image: url('/images/clippy-head-scratch.gif');
+  width: 100px;
+  height: 94px;
+  position: absolute;
+  margin-left: 80%;
+  margin-top: 20%;
+  z-index: 100;
+  cursor: grab;
+  background-size: contain;
+  opacity: 0.95;
+  transition: opacity 0.33s ease-in-out;
+}
+
+#clippy:hover {
+  opacity: 1;
+}
+
+#clippy:hover::after {
+  font-family: new-atten, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  content: "fauXcel is not finished yet but will be feature complete soon 😊. For now you can only drag me around. In a future version I will be connected to ChatGPT 😏. All math operators with cell references and ranges work, in addition to the formulas AVG, SUM and ROUND.";
+  position: absolute;
+  display: block;
+  border: 1px solid black;
+  background-color: #ffffcc;
+  color: black;
+  padding: 1em;
+  border-radius: 6px;
+  width: 15em;
+  top: -170px;
+  left: -6em;
+  box-shadow: 4px 4px 20px rgba(10, 10, 10, 0.9);
+  text-align: center;
+}
+
+#clippy:active {
+  cursor: grabbing;
 }
