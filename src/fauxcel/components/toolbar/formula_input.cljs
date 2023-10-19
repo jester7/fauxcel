@@ -5,7 +5,7 @@
 (defn formula-input []
   [:li.toolbar-item.formula-input
    [:span.toolbar-label "f(x)"]
-   [:input.formula-input {:value @current-formula
+   [:input.formula-input {:read-only true :value @current-formula
                           ::on-change
                           (fn [e]
                             (reset! current-formula (-> e .-target .-value)))}]])
