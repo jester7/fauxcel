@@ -1,18 +1,82 @@
 body {
-  font-family: mr-eaves-xl-modern, sans-serif;
-  font-weight: 400;
+  font-family: solitas-serif-normal, sans-serif;
+  font-weight: 300;
   font-style: normal;
   font-size: 16px;
 }
 
+p,
+span {
+  font-family: solitas-serif-normal, sans-serif;
+  font-weight: 300;
+  font-style: normal;
+  font-size: 1em;
+}
+
 .dark-bg {
-  background-color: var(--dark-bg-color)
+  /* dark gradient background */
+  background: var(--dark-gradient);
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4,
+h5 {
   color: #000;
+  font-family: mr-eaves-xl-modern, sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.loading-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  justify-content: space-around;
+  align-items: center;
+  /* linear gradient at 34deg angle */
+  background: var(--primary-gradient);
+}
+
+.logo.loading {
+  background: url('/images/fauxcel-logo-large.png') no-repeat center center;
+  width: 50vh;
+  height: 50vh;
+  background-size: contain;
+  position: relative;
+  animation: spin 2s linear infinite;
+  animation-timing-function: ease-in-out;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.logotype {
+  font-family: mr-eaves-xl-modern, sans-serif;
+  font-weight: 800;
+  font-style: normal;
+}
+
+h1.logotype {
+  color: var(--dark-color-1);
+  font-size: 5em;
+  text-align: center;
+  text-shadow: 0.05em 0.05em 0.1em var(--dark-color-2);
+}
+
+.loading-text {
+  color: var(--dark-color-1);
+  font-size: 2em;
+  font-family: new-atten, sans-serif;
+  font-weight: 700;
+  font-style: normal;
+  text-shadow: 0.03em 0.03em 0.075em var(--dark-color-1);
 }
 
 h1 {
@@ -31,62 +95,111 @@ h3 {
   position: sticky;
   display: flex;
   flex-direction: row;
+  padding: 0.25em;
+  color: var(--button-text);
 }
 
-.toolbar .toolbar-item .app-name {
-  font-family: mr-eaves-xl-modern, sans-serif;
-  font-weight: 900;
+.toolbar-item.button {
+  font-size: 1.25em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  height: 1.25em;
+  width: 1.25em;
+  padding: 0.25em;
+  text-align: center;
+  margin: 0 0.1em;
+}
+
+.toolbar-item.button:hover {
+  border: 1px solid var(--dark-color-1);
+  background-color: var(--button-bg-active);
+}
+
+.toolbar-item.button.separator {
+  background-color: transparent;
+  cursor: default;
+}
+
+.toolbar-item.button.separator:hover {
+  background-color: transparent;
+}
+
+.toolbar-item.button.bold span {
+  font-family: solitas-serif-normal, sans-serif;
+  font-weight: 700;
   font-style: normal;
-  font-size: 1.5em;
-  padding-right: 1em;
-  color: var(--glaucous);
+}
+
+.toolbar-item.button.italic span {
+  font-family: solitas-serif-normal, sans-serif;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.toolbar-item.button.underline span {
+  font-family: solitas-serif-normal, sans-serif;
+  font-weight: 300;
+  font-style: normal;
+  text-decoration: underline;
+}
+
+
+
+.toolbar-item.button span {
   vertical-align: middle;
 }
 
-.toolbar .toolbar-item {
+.toolbar-item.button.separator {
+  border: none;
+  opacity: 0.34;
+}
+
+.toolbar .small.logo {
+  cursor: pointer;
+  display: block;
+  background: url('/images/fauxcel-logo-large.png') no-repeat center center;
+  width: 2em;
+  height: 2em;
+  background-size: contain;
+  position: relative;
+  /* animation: spin 2s linear infinite;
+  animation-timing-function: ease-in-out; */
+}
+
+.app-name {
   font-family: mr-eaves-xl-modern, sans-serif;
-  font-weight: 400;
+  font-weight: 800;
   font-style: normal;
-  padding: 0.5em 1em;
-  color: var(--button-text);
+  font-size: 1.5em;
+  padding-right: 1em;
+  color: var(--accent-color);
   vertical-align: middle;
 }
 
 .formula-input .toolbar-label {
-  font-family: courier-prime, monospace;
-  font-weight: 700;
+  font-family: lexia-mono-variable, monospace;
+  font-variation-settings: "wght" 700;
   font-style: normal;
-  padding-right:0.5em;
-  font-size:1em;
+  padding-right: 0.25em;
+  font-size: 1em;
 }
 
-.toolbar .toolbar-item input.formula-input {
-  font-size:1em;
-  font-family: courier-prime, monospace;
-  font-weight: 400;
+.toolbar .toolbar-item .formula-input {
+  font-size: 1em;
+  font-family: lexia-mono-variable, monospace;
+  font-variation-settings: "wght" 500;
   font-style: normal;
   color: black;
-  background-color: var(--highlight);
+  background-color: var(--bg-color-light);
   border: 1px solid var(--highlight);
-  padding: 0.25em 0.5em;
+  padding: 0.25em 0.25em;
   border-radius: 0.25em;
 }
-
-.toolbar .toolbar-item a {
-  color: var(--button-text);
-  border: 1px solid #00000000;
-  padding: 0.25em 0.5em;
-}
-
-.toolbar .toolbar-item a:hover {
-  border: 1px solid var(--highlight);
-  border-radius: 0.25em;
-}
-
 
 
 .cellgrid {
-  overflow:scroll;
+  overflow: scroll;
 }
 
 .cellgrid .row.wrapper:first-child {
@@ -97,53 +210,56 @@ h3 {
 
 
 .cellgrid .row.wrapper:first-child span:first-child {
-  color:var(--cell-label-bg);
+  color: var(--cell-label-bg);
   z-index: 100;
+}
 
+.cellgrid .col-label,
+.cellgrid .row-label {
+  font-family: lexia-mono-variable, monospace;
+  font-variation-settings: "wght" 300;
+  font-size: 1em;
+  color: var(--cell-label-text);
+  background-color: var(--cell-label-bg);
+  border: 1px solid var(--cell-border);
 }
 
 .cellgrid .row.wrapper {
-  float:left;
-  clear:both;
+  float: left;
+  clear: both;
   display: flex;
-  padding:0;
-  margin:0;
+  padding: 0;
+  margin: 0;
 }
 
 .cellgrid .row.wrapper .row-label {
-  text-align:right;
-  width:2em;
+  text-align: right;
+  width: 2em;
   display: block;
   flex-shrink: 0;
-  padding:0.25em 0.2em 0.25em 0em;
-  background-color:var(--cell-label-bg);
-  border:1px solid var(--highlight);
-  position:sticky;
-  left:0;
+  padding: 0.25em 0.2em 0.25em 0em;
+  position: sticky;
+  left: 0;
 }
 
 .cellgrid .row.wrapper .col-label {
-  text-align:right;
+  text-align: center;
   display: block;
-  width:var(--cell-max-width);
-  border:1px solid var(--highlight);
-  font-family: courier-prime, monospace;
-  font-size:1em;
+  width: var(--cell-max-width);
   flex-shrink: 0;
-  padding:0.25em;
-  background-color:var(--cell-label-bg)
-
+  padding: 0.25em;
 }
 
 .cellgrid .row.wrapper input {
-  border-radius:0;
-  float:left;
-  width:var(--cell-max-width);
-  height:1em;
-  font-size:1em;
-  padding:0.25em;
+  border: 1px solid var(--cell-border);
+  border-radius: 0;
+  float: left;
+  width: var(--cell-max-width);
+  height: 1em;
+  font-size: 1em;
+  padding: 0.25em;
 }
 
 .cellgrid .row.wrapper input.selected {
-  background-color:var(--button-bg-color);
+  background-color: var(--select-focus);
 }

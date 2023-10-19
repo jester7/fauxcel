@@ -1,21 +1,35 @@
 :root {
-  --licorice: #151118ff;
-  --glaucous: #7776bcff;
-  --earth-yellow: #db9d47ff;
-  --dark-moss-green: #535936ff;
-  --honeydew: #e2f3ebff;
+  --robin-egg-blue: #51d1e1ff;
+  --turquoise: #3be3beff;
+  --night: #03120fff;
+  --federal-blue: #120052ff;
+  --maize: #feed72ff;
 
-  --dark-bg-color: var(--licorice);
-  --highlight: var(--honeydew);
-  --button-text: var(--earth-yellow);
-  --button-bg-color: #6645d6;
-  --button-bg-active: #6040d1;
-  --button-bg-disabled: #515261;
+  --dark-color-1: var(--night);
+  --dark-color-2: var(--federal-blue);
+
+  --primary-color: var(--robin-egg-blue);
+  --secondary-color: var(--turquoise);
+  --accent-color: var(--maize);
+  --bg-color-light: #EEFAFCFF;
+  --border-light: var(--bg-color-light);
+
+  --primary-gradient: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  --dark-gradient: linear-gradient(34deg, var(--federal-blue) 0%, var(--night) 50%);
+
+  --bg-color-dark: var(--night);
+  --highlight: var(--turquoise);
+  --button-text: #FFFDEBFF;
+  --button-bg-color: var(--federal-blue);
+  --button-bg-active: #66005aff;
+  --button-bg-disabled: #322f32;
 
 
   --select-border: var(--highlight);
-  --select-focus: var(--button-bg-active);
+  --select-focus: #a8e8f0ff;
   --select-arrow: var(--select-border);
-  --cell-max-width: 5em;
-  --cell-label-bg: #373847;
+  --cell-border: hsl(190, 34%, 88%);
+  --cell-max-width: 8em;
+  --cell-label-bg: #06231Dff;
+  --cell-label-text: var(--button-text);
 }
