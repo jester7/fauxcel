@@ -111,6 +111,29 @@ h3 {
   margin: 0 0.1em;
 }
 
+.toolbar-item.button.github {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  width: auto;
+}
+
+.toolbar-item.button.github .caption {
+  font-family: new-atten, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  padding: 0.25em;
+}
+
+.toolbar-item.button.github .icon {
+  background: url('/images/github-logo-white.png') no-repeat center center;
+  background-size: contain;
+  display: block;
+  width: 1.25em;
+  height: 1.25em;
+  min-width: 1.25em;
+}
+
 .toolbar-item.button.disabled {
   opacity: 0.25;
   cursor: not-allowed;
