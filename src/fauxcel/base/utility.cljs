@@ -3,7 +3,8 @@
    [reagent.core :as r]
    [reagent.ratom]
    [fauxcel.base.state :as state :refer [cells-map current-selection current-formula]]
-   [fauxcel.util.dom :as dom :refer [querySelector]]))
+   [fauxcel.util.dom :as dom :refer [querySelector]]
+   [fauxcel.base.constants :as c]))
 
 ;; ---------------------------------------------
 ;; copied from my ClojureScript7 project
@@ -70,7 +71,7 @@
    :col (js/parseInt (-> el .-dataset .-col))})
 
 (defn row-col-for-cell-ref [cell-ref]
-  (let [matches (re-matches #"^([A-Z]{1,2})([1-9]{0,4})" cell-ref)]
+  (let [matches (re-matches c/cell-ref-re cell-ref)]
     {:row (js/parseInt (matches 2)) :col (matches 1)}))
 
 (defn col-labels [] ; TODO / not being used yet, move col labels out of main spreadsheet div and sync scrolling 
@@ -85,7 +86,7 @@
   ([row col] (@cells-map (cell-ref row col))))
 
 (defn cell-value-for
-  ([cell-ref] (:value (@cells-map cell-ref)))
+  ([cell-ref] (println "cell-value-for: " cell-ref (:value (@cells-map cell-ref))) (:value (@cells-map cell-ref)))
   ([row col] (:value (@cells-map (cell-ref row col)))))
 
 
@@ -179,3 +180,6 @@
             (swap! cells-map
                    assoc (cell-ref row col) c-map))))
       (not-changed! cell-el)))
+
+(defn num-to-char [num]
+  (char (+ num 64)))
