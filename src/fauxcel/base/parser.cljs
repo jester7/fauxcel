@@ -4,7 +4,8 @@
    [reagent.core :as r]
    [clojure.string :as s]
    [fauxcel.base.utility :as util :refer
-    [cell-value-for row-col-for-cell-ref]]))
+    [cell-value-for row-col-for-cell-ref]]
+   [fauxcel.base.constants :as c]))
 
 ;; ---------------------------------------------
 ;; copied from my ClojureScript7 project
@@ -12,7 +13,7 @@
 ;;        right now they are hard-coded in the tokenize-re regex
 ;; ---------------------------------------------
 
-(def  tokenize-re #"\,|ROUND|SUM|AVG|[[A-Z]{1,2}[1-9]{0,4}[\:][A-Z]{1,2}[1-9]{0,4}]*|[[0-9]?\.?[0-9]+]*|[\/*\-+^\(\)]|[[A-Z]{1,2}[1-9]{1,4}]*")
+(def  tokenize-re #"\,|ROUND|COUNTA|COUNT|RAND|STDEV|MEDIAN|ABS|SUM|AVG|[[a-zA-Z]{1,2}[0-9]{0,4}[\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\.?[0-9]+]*|[\/*\-+^\(\)]|[[a-zA-Z]{1,2}[0-9]{1,4}]*")
 
 ; dead end: was going to try handling unary minus with a regex
 ; but there is some kind of regex bug
@@ -20,12 +21,12 @@
 (def unary-minus-re #"^(-)[0-9a-zA-Z]*[\(]?") ; can't use this regex
 ; bug in cljs? https://ask.clojure.org/index.php/8329/caret-character-differences-with-re-seq-in-cljs-vs-clj
 
-(def test-expr-1 "-3 + A3 / Z99 * Y1 + -.000923")
-(def test-expr-2 "1.2 + 3.141 / 99 * 2")
-(def test-expr-3 "(1.2 + 3.141) / 99 * 2")
-(def test-expr-4 "1+3/9*2")
-(def test-unary "-(-3 - -2)")
-(def test-unary-exp "-3^-2")
+;; (def test-expr-1 "-3 + A3 / Z99 * Y1 + -.000923")
+;; (def test-expr-2 "1.2 + 3.141 / 99 * 2")
+;; (def test-expr-3 "(1.2 + 3.141) / 99 * 2")
+;; (def test-expr-4 "1+3/9*2")
+;; (def test-unary "-(-3 - -2)")
+;; (def test-unary-exp "-3^-2")
 
 (def ^:const left-p "(")
 (def ^:const right-p ")")
@@ -34,17 +35,23 @@
 (def ^:const comma ",")
 (def ^:const multi-arity 999)
 
-; Map of string tokens to functions
-; assumes all functions other than operators are multi-arity
-(def ^:const operators {"^" {:fn Math/pow :precedence 3 :arity 2}
-                        "*" {:fn * :precedence 2 :arity 2}
-                        "/" {:fn / :precedence 2 :arity 2}
-                        "+" {:fn + :precedence 1 :arity 2}
-                        "-" {:fn - :precedence 1 :arity 2}})
+; Map of arithmetic operators to functions
+(def ^:const operators {"^" {:fn Math/pow :precedence 3 :arity 2 :nil-equals-zero? true}
+                        "*" {:fn * :precedence 2 :arity 2 :nil-equals-zero? true}
+                        "/" {:fn / :precedence 2 :arity 2 :nil-equals-zero? true}
+                        "+" {:fn + :precedence 1 :arity 2 :nil-equals-zero? true} ; maps to + function with arity 2
+                        "-" {:fn - :precedence 1 :arity 2 :nil-equals-zero? true}})
 
-(def ^:const functions {"SUM" {:fn + :precedence 1 :arity multi-arity}
-                        "AVG" {:fn m/average :precedence 1 :arity multi-arity}
-                        "ROUND" {:fn m/round :precedence 1 :arity 2}})
+; Map of string tokens to functions
+(def ^:const functions {"SUM" {:fn + :precedence 1 :arity multi-arity :nil-equals-zero? true} ; maps to + function with multi-arity
+                        "AVG" {:fn m/average :precedence 1 :arity multi-arity :nil-equals-zero? true}
+                        "ROUND" {:fn m/round :precedence 1 :arity 2 :nil-equals-zero? true}
+                        "COUNTA" {:fn m/count-all :precedence 1 :arity multi-arity :nil-equals-zero? false}
+                        "COUNT" {:fn m/count-numeric :precedence 1 :arity multi-arity :nil-equals-zero? false}
+                        "ABS" {:fn abs :precedence 1 :arity 1 :nil-equals-zero? true}
+                        "STDEV" {:fn m/standard-deviation :precedence 1 :arity multi-arity :nil-equals-zero? true}
+                        "MEDIAN" {:fn m/median :precedence 1 :arity multi-arity :nil-equals-zero? true}
+                        "RAND" {:fn m/random-number :precedence 1 :arity 2 :nil-equals-zero? true}})
 
 (defn function? [token-str]
   (not (nil? (functions token-str))))
@@ -65,13 +72,14 @@
 
 (defn cell-range? [token]
   (if (string? token)
-    (not (nil? (re-seq #"^[A-Z]{1,2}[1-9]{0,4}[\:][A-Z]{1,2}[1-9]{0,4}$" token)))
+    (not (nil? (re-seq c/cell-range-check-re token)))
     false))
 
 (defn expand-cell-range [range-str]
+  (println "expand-cell-range was passed range-str: " range-str)
   (cond
     (cell-range? range-str)
-    (let [matches (re-matches #"^([A-Z]{1,2}[1-9]{0,4})[\:]([A-Z]{1,2}[1-9]{0,4})$" range-str)
+    (let [matches (re-matches c/cell-range-start-end-re range-str)
           start-cell (matches 1) end-cell (matches 2)
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)]
@@ -86,10 +94,12 @@
 
 ;;; Turns an algebraic expression string into a sequence of strings with individual tokens 
 (defn tokenize-as-str [expression-str]
-  (let [cell-ref-re #"([A-Z]{1,2}[1-9]{0,4})[\:]([A-Z]{1,2}[1-9]{0,4})"
+  (let [cell-ref-re c/cell-range-re
         expanded-refs (s/replace expression-str
                                  cell-ref-re
                                  #(str (s/join "," (expand-cell-range (%1 0)))))]
+    (println "expression-str: " expression-str)
+    (println "expanded-refs: " expanded-refs)
     (re-seq tokenize-re (s/upper-case (strip-whitespace expanded-refs)))))
 
 ;;; Scans tokens for minus signs and determines if the minus sign should
@@ -132,27 +142,18 @@
     :else
     (not (nil? (re-seq #"^[A-Z]{1,2}[0-9]{1,4}$" val)))))
 
-
-;;; Returns the number value from a numeric string but it doesn't do
-;;; error checking so the return value could be NaN.
-(defn eval-number [val]
-  (cond
-    (number? val) val
-    (nil? val) 0
-    :else
-    (if (re-seq #"\." val) (js/parseFloat val) (js/parseInt val))))
-
 (defn eval-cell-ref
   ([cell-ref] (eval-cell-ref cell-ref true))
   ([cell-ref when-not-cell-ref-return-nil?]
    (if (cell-ref? cell-ref)
      (r/track! #(let [cell-data (cell-value-for cell-ref)]
-                  (if (m/numeric? cell-data) (eval-number cell-data) cell-data)))
+                  (if (m/numeric? cell-data) (m/eval-number cell-data) cell-data)))
      (if when-not-cell-ref-return-nil? nil cell-ref))))
 
 ;;; Takes a token in string format and returns the corresponding function (if an operator)
 ;;; or the text in the cell (nil if empty) or the numeric value.
 (defn eval-token [token]
+  (println "eval-token was passed token: " token)
   (cond
     ; If it's an operator, return the function
     (:fn (operators token)) ; (operators token) returns nil if not found
@@ -170,7 +171,7 @@
 
     ; must be a number then
     :else
-    (eval-number token)))
+    (m/eval-number token)))
 
 ;;; Needed to handle parentheses swapping for expression reversal
 (defn swap-parentheses [expression] ; turns "(" into ")" and vice versa
@@ -189,13 +190,20 @@
 (defn pop-stack-while! [predicate op-stack out-stack arity-stack]
   (while (predicate)
     (let [op-or-fn-token (peek @op-stack)
-          fn? (function? op-or-fn-token)
+          nil-equals-zero? (cond (operator? op-or-fn-token)
+                                 (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
+                                 (function? op-or-fn-token)
+                                 (:nil-equals-zero? (functions op-or-fn-token))) ; get nil-equals-zero? flag from functions map
           arity (if fn? (peek @arity-stack) 2)] ; default assume binary function
       (when fn? (swap! arity-stack pop))
       (reset! out-stack
               (conj
                (nthrest @out-stack arity) ; pop operands equal to arity of func
-               (apply (eval-token op-or-fn-token) (map #(or (eval-token %1) 0) (take arity @out-stack)))))
+               (apply (eval-token op-or-fn-token)
+                      (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
+                              (or (eval-token %1) 0) ; replace nil with 0
+                              (eval-token %1)) ; else just eval the token
+                           (take arity @out-stack)))))
       (swap! op-stack pop))))
 
 
@@ -208,6 +216,7 @@
         op-stack (atom ())
         arity-stack (atom ())
         out-stack (atom ())]
+    (println "reversed-expr: " reversed-expr)
     (dotimes [i (count reversed-expr)]
 
       (let [token (nth reversed-expr i)]
