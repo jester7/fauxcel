@@ -7,11 +7,8 @@
     [cell-value-for row-col-for-cell-ref]]
    [fauxcel.base.constants :as c]))
 
-;; ---------------------------------------------
-;; copied from my ClojureScript7 project
-;; TODO - define regular expressions for tokenizing functions dynamically,
-;;        right now they are hard-coded in the tokenize-re regex
-;; ---------------------------------------------
+;; TODO move all constants out and compile regex dynamically with re-pattern function instead of hard-coded def tokenize-re below
+;; fix last regex bug with 0-9 in cell-ref? function
 
 (def  tokenize-re #"\,|ROUND|COUNTA|COUNT|RAND|STDEV|MEDIAN|ABS|SUM|AVG|[[a-zA-Z]{1,2}[0-9]{0,4}[\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\.?[0-9]+]*|[\/*\-+^\(\)]|[[a-zA-Z]{1,2}[0-9]{1,4}]*")
 
@@ -33,7 +30,7 @@
 (def ^:const exp "^")
 (def ^:const minus "-")
 (def ^:const comma ",")
-(def ^:const multi-arity 999)
+(def ^:const multi-arity 999) ; TODO check if it can be set to -1 instead
 
 ; Map of arithmetic operators to functions
 (def ^:const operators {"^" {:fn Math/pow :precedence 3 :arity 2 :nil-equals-zero? true}
@@ -43,7 +40,7 @@
                         "-" {:fn - :precedence 1 :arity 2 :nil-equals-zero? true}})
 
 ; Map of string tokens to functions
-(def ^:const functions {"SUM" {:fn + :precedence 1 :arity multi-arity :nil-equals-zero? true} ; maps to + function with multi-arity
+(def ^:const functions {"SUM" {:fn m/sum :precedence 1 :arity multi-arity :nil-equals-zero? true}
                         "AVG" {:fn m/average :precedence 1 :arity multi-arity :nil-equals-zero? true}
                         "ROUND" {:fn m/round :precedence 1 :arity 2 :nil-equals-zero? true}
                         "COUNTA" {:fn m/count-all :precedence 1 :arity multi-arity :nil-equals-zero? false}
@@ -134,13 +131,13 @@
 (defn precedence [v]
   (or (:precedence (operators v)) 0))
 
-(defn cell-ref? [val]
+(defn cell-ref? [val] ; fix regex and move to constants
   (cond
     (= "" val) false
     (number? val) false
     (coll? val) false
     :else
-    (not (nil? (re-seq #"^[A-Z]{1,2}[0-9]{1,4}$" val)))))
+    (not (nil? (re-seq #"^[A-Z]{1,2}[0-9]{1,4}$" val))))) ; TODO this regex has 0-9 bug like others had before
 
 (defn eval-cell-ref
   ([cell-ref] (eval-cell-ref cell-ref true))
@@ -153,7 +150,6 @@
 ;;; Takes a token in string format and returns the corresponding function (if an operator)
 ;;; or the text in the cell (nil if empty) or the numeric value.
 (defn eval-token [token]
-  (println "eval-token was passed token: " token)
   (cond
     ; If it's an operator, return the function
     (:fn (operators token)) ; (operators token) returns nil if not found
@@ -190,12 +186,13 @@
 (defn pop-stack-while! [predicate op-stack out-stack arity-stack]
   (while (predicate)
     (let [op-or-fn-token (peek @op-stack)
+          func? (function? op-or-fn-token) ; unlike built-in fn? , function? only returns true for non operator functions in function map
           nil-equals-zero? (cond (operator? op-or-fn-token)
                                  (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
                                  (function? op-or-fn-token)
                                  (:nil-equals-zero? (functions op-or-fn-token))) ; get nil-equals-zero? flag from functions map
-          arity (if fn? (peek @arity-stack) 2)] ; default assume binary function
-      (when fn? (swap! arity-stack pop))
+          arity (if func? (peek @arity-stack) 2)] ; assume binary operator if not a function 
+      (when func? (swap! arity-stack pop))
       (reset! out-stack
               (conj
                (nthrest @out-stack arity) ; pop operands equal to arity of func
@@ -240,8 +237,6 @@
           (= comma token)
           (reset! arity-stack (conj (rest @arity-stack) (inc (peek @arity-stack))))
 
-
-
           ; if token is an operator and is the first one found in this expression
           (and (operator? token) (empty? @op-stack))
           (swap! op-stack conj token)
@@ -253,7 +248,6 @@
             (pop-stack-while!
              #(function? (peek @op-stack)) op-stack out-stack arity-stack))
             ;(swap! op-stack conj token) ;)
-
 
           ; handles all other operators when not the first one
           (operator? token)
