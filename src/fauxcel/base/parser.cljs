@@ -5,7 +5,8 @@
    [clojure.string :as s]
    [fauxcel.base.utility :as util :refer
     [cell-value-for row-col-for-cell-ref]]
-   [fauxcel.base.constants :as c]))
+   [fauxcel.base.constants :as c]
+   [fauxcel.util.dates :as dates]))
 
 ;;; This file contains the core parser functions for evaluating formulas
 ;;; including algebraic expressions, functions and cell references.
@@ -38,7 +39,8 @@
                         "ABS" {:fn abs :precedence 1 :arity 1 :nil-equals-zero? true}
                         "STDEV" {:fn m/standard-deviation :precedence 1 :arity multi-arity :nil-equals-zero? true}
                         "MEDIAN" {:fn m/median :precedence 1 :arity multi-arity :nil-equals-zero? true}
-                        "RAND" {:fn m/random-number :precedence 1 :arity 2 :nil-equals-zero? true}})
+                        "RAND" {:fn m/random-number :precedence 1 :arity 2 :nil-equals-zero? true}
+                        "TODAY" {:fn dates/today :precedence 1 :arity 1 :nil-equals-zero? true}})
 
 ;(def  tokenize-re #"\,|ROUND|COUNTA|COUNT|RAND|STDEV|MEDIAN|ABS|SUM|AVG|[[a-zA-Z]{1,2}[0-9]{0,4}[\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\.?[0-9]+]*|[\/*\-+^\(\)]|[[a-zA-Z]{1,2}[0-9]{1,4}]*")
 
