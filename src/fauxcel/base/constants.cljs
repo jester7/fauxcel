@@ -8,4 +8,6 @@
 
 (def ^:const cell-ref-re #"^([a-zA-Z]{1,2})([0-9]{0,4})")
 
+(def ^:const is-numeric-re #"^[+-]?(?:\d*[\.\,])?\d*$")
+
 (def ^:const empty-cell {:formula "" :format "" :value ""})
