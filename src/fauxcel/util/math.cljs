@@ -1,4 +1,5 @@
-(ns fauxcel.util.math)
+(ns fauxcel.util.math
+  (:require [fauxcel.base.constants :as c]))
 
 ;; round to specified decimal place or default 0, nearest integer
 (defn round
@@ -18,14 +19,25 @@
 ;; Returns the number value from a numeric string but it doesn't do
 ;; error checking so the return value could be NaN.
 (defn eval-number
-  ([val] (cond
+  ([val]
+   (cond
     (number? val) val
     (nil? val) 0
     ;; (coll? val) (map eval-number val)
     :else
     (if (re-seq #"\." val) (js/parseFloat val) (js/parseInt val))))
-  ([val nil-equals-zero?] ; TODO check if needed, this is working in the parser with nil-equals-zero? flag
-    (if (and (not nil-equals-zero?) (nil? val)) nil (eval-number val))))
+  ([val nil-or-str-equals-zero?]
+    (cond
+      (number? val) val
+      (and nil-or-str-equals-zero? (nil? val)) 0 ; coerce nil to 0
+      (and nil-or-str-equals-zero? (string? val) (not (re-seq c/is-numeric-re val))) 0 ; coerce non-numeric string to 0
+      :else
+      (if (re-seq #"\." val) (js/parseFloat val) (js/parseInt val)))))
+
+;; ---------------------------------------------
+;; Returns the sum of a list of numbers
+(defn sum [& nums]
+  (reduce + (map #(eval-number %1 true) nums)))
 
 ;; ---------------------------------------------
 ;; Returns the average of a list of numbers
