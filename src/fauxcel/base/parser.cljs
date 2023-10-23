@@ -43,18 +43,25 @@
                         "TODAY" {:fn dates/today :precedence 1 :arity 1 :nil-equals-zero? true}
                         "CONCAT" {:fn str :precedence 1 :arity multi-arity :nil-equals-zero? false}})
 
-;(def  tokenize-re #"\,|ROUND|COUNTA|COUNT|RAND|STDEV|MEDIAN|ABS|SUM|AVG|[[a-zA-Z]{1,2}[0-9]{0,4}[\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\.?[0-9]+]*|[\/*\-+^\(\)]|[[a-zA-Z]{1,2}[0-9]{1,4}]*")
-
 ;; Create the dynamic regex pattern using re-pattern
 (def dynamic-tokenize-re
   (re-pattern (str "\\,|" (str (s/join "|" (keys functions)))
                    "|[[a-zA-Z]{1,2}[0-9]{0,4}[\\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\\.?[0-9]+]*|[\\/*\\-+^\\(\\)]"
-                   "|[[a-zA-Z]{1,2}[0-9]{1,4}]*")))
+                   "|[[a-zA-Z]{1,2}[0-9]{1,4}]*"
+                   "|(?<=\")[^,]*?(?=\")")))
 
 (def tokenize-re dynamic-tokenize-re)
 
+(defn get-function [token-str]
+  (if (nil? token-str)
+    nil
+    (functions (s/upper-case token-str))))
+
 (defn function? [token-str]
-  (not (nil? (functions token-str))))
+  (cond
+    (nil? token-str) false
+    (number? token-str) false
+    :else (not (nil? (get-function token-str)))))
 
 (defn operator? [token-str]
   (not (nil? (operators token-str))))
@@ -64,7 +71,7 @@
 
 (defn get-arity [token-str]
   (cond
-    (function? token-str) (:arity (functions token-str))
+    (function? token-str) (:arity (get-function token-str))
     (operator? token-str) 2
     :else 0))
 
@@ -78,7 +85,8 @@
   (cond
     (cell-range? range-str)
     (let [matches (re-matches c/cell-range-start-end-re range-str)
-          start-cell (matches 1) end-cell (matches 2)
+          start-cell (s/upper-case (matches 1))
+          end-cell (s/upper-case (matches 2))
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)]
       (flatten (for [col (range (.charCodeAt (:col start)) (inc (.charCodeAt (:col end))))]
@@ -88,7 +96,7 @@
     nil))
 
 (defn strip-whitespace [input-str] ; discards whitespace, used before tokenizing
-  (s/replace input-str #"\s" ""))
+  (s/replace input-str #"\s(?=(?:\"[^\"]*\"|[^\"])*$)" ""))
 
 ;;; Turns an algebraic expression string into a sequence of strings with individual tokens 
 (defn tokenize-as-str [expression-str]
@@ -98,6 +106,7 @@
                                  #(str (s/join "," (expand-cell-range (%1 0)))))]
     (println "expression-str: " expression-str)
     (println "expanded-refs: " expanded-refs)
+    (println ">>> tokenize-re: " (re-seq tokenize-re (strip-whitespace expanded-refs)))
     (re-seq tokenize-re (s/upper-case (strip-whitespace expanded-refs)))))
 
 ;;; Scans tokens for minus signs and determines if the minus sign should
@@ -157,7 +166,7 @@
     (:fn (operators token))
 
     (function? token)
-    (:fn (functions token))
+    (:fn (get-function token))
 
     (cell-range? token) ; TODO check if safe to delete; moved cell range expansion to tokenizer
     (expand-cell-range token)
@@ -194,7 +203,7 @@
           nil-equals-zero? (cond (operator? op-or-fn-token)
                                  (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
                                  (function? op-or-fn-token)
-                                 (:nil-equals-zero? (functions op-or-fn-token))) ; get nil-equals-zero? flag from functions map
+                                 (:nil-equals-zero? (get-function op-or-fn-token))) ; get nil-equals-zero? flag from functions map
           arity (if func? (peek @arity-stack) 2)] ; assume binary operator if not a function 
       (when func? (swap! arity-stack pop))
       (reset! out-stack
@@ -217,6 +226,10 @@
         op-stack (atom ())
         arity-stack (atom ())
         out-stack (atom ())]
+    (println "infix-expression: " infix-expression)
+    (println "tokenized-expr: " (tokenize-as-str infix-expression))
+    (println "after swap-unary-minus: " (swap-unary-minus (tokenize-as-str infix-expression)))
+    (println "after swap-parentheses: " (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression))))
     (println "reversed-expr: " reversed-expr)
     (dotimes [i (count reversed-expr)]
 
