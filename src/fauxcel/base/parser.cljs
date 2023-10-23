@@ -7,23 +7,13 @@
     [cell-value-for row-col-for-cell-ref]]
    [fauxcel.base.constants :as c]))
 
-;; TODO move all constants out and compile regex dynamically with re-pattern function instead of hard-coded def tokenize-re below
-;; fix last regex bug with 0-9 in cell-ref? function
-
-(def  tokenize-re #"\,|ROUND|COUNTA|COUNT|RAND|STDEV|MEDIAN|ABS|SUM|AVG|[[a-zA-Z]{1,2}[0-9]{0,4}[\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\.?[0-9]+]*|[\/*\-+^\(\)]|[[a-zA-Z]{1,2}[0-9]{1,4}]*")
-
-; dead end: was going to try handling unary minus with a regex
-; but there is some kind of regex bug
-; abandoned and wrote the function swap-unary-minus instead
-(def unary-minus-re #"^(-)[0-9a-zA-Z]*[\(]?") ; can't use this regex
-; bug in cljs? https://ask.clojure.org/index.php/8329/caret-character-differences-with-re-seq-in-cljs-vs-clj
-
-;; (def test-expr-1 "-3 + A3 / Z99 * Y1 + -.000923")
-;; (def test-expr-2 "1.2 + 3.141 / 99 * 2")
-;; (def test-expr-3 "(1.2 + 3.141) / 99 * 2")
-;; (def test-expr-4 "1+3/9*2")
-;; (def test-unary "-(-3 - -2)")
-;; (def test-unary-exp "-3^-2")
+;;; This file contains the core parser functions for evaluating formulas
+;;; including algebraic expressions, functions and cell references.
+;;; It is based on the Shunting Yard algorithm by Edsger Dijkstra
+;;; (https://en.wikipedia.org/wiki/Shunting_yard_algorithm)
+;;; adapted to include support for variable argument functions (multi-arity).
+;;; Tokenization is done with a regular expression. Unary minus is handled
+;;; by swapping it with multiplication by -1 and surrounding with parentheses.
 
 (def ^:const left-p "(")
 (def ^:const right-p ")")
@@ -50,16 +40,24 @@
                         "MEDIAN" {:fn m/median :precedence 1 :arity multi-arity :nil-equals-zero? true}
                         "RAND" {:fn m/random-number :precedence 1 :arity 2 :nil-equals-zero? true}})
 
+;(def  tokenize-re #"\,|ROUND|COUNTA|COUNT|RAND|STDEV|MEDIAN|ABS|SUM|AVG|[[a-zA-Z]{1,2}[0-9]{0,4}[\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\.?[0-9]+]*|[\/*\-+^\(\)]|[[a-zA-Z]{1,2}[0-9]{1,4}]*")
+
+;; Create the dynamic regex pattern using re-pattern
+(def dynamic-tokenize-re
+  (re-pattern (str "\\,|" (str (s/join "|" (keys functions)))
+                   "|[[a-zA-Z]{1,2}[0-9]{0,4}[\\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\\.?[0-9]+]*|[\\/*\\-+^\\(\\)]"
+                   "|[[a-zA-Z]{1,2}[0-9]{1,4}]*")))
+
+(def tokenize-re dynamic-tokenize-re)
+
 (defn function? [token-str]
   (not (nil? (functions token-str))))
-
 
 (defn operator? [token-str]
   (not (nil? (operators token-str))))
 
 (defn operand? [token-str]
   (and (not= left-p token-str) (not= comma token-str) (not (function? token-str)) (not= right-p token-str) (nil? (operators token-str))))
-
 
 (defn get-arity [token-str]
   (cond
