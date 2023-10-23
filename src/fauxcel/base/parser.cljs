@@ -40,7 +40,8 @@
                         "STDEV" {:fn m/standard-deviation :precedence 1 :arity multi-arity :nil-equals-zero? true}
                         "MEDIAN" {:fn m/median :precedence 1 :arity multi-arity :nil-equals-zero? true}
                         "RAND" {:fn m/random-number :precedence 1 :arity 2 :nil-equals-zero? true}
-                        "TODAY" {:fn dates/today :precedence 1 :arity 1 :nil-equals-zero? true}})
+                        "TODAY" {:fn dates/today :precedence 1 :arity 1 :nil-equals-zero? true}
+                        "CONCAT" {:fn str :precedence 1 :arity multi-arity :nil-equals-zero? false}})
 
 ;(def  tokenize-re #"\,|ROUND|COUNTA|COUNT|RAND|STDEV|MEDIAN|ABS|SUM|AVG|[[a-zA-Z]{1,2}[0-9]{0,4}[\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\.?[0-9]+]*|[\/*\-+^\(\)]|[[a-zA-Z]{1,2}[0-9]{1,4}]*")
 
@@ -164,6 +165,9 @@
     ; If cell ref, evaluate and return 
     (cell-ref? token)
     (util/recursive-deref (eval-cell-ref token))
+
+    (and (string? token) (not (m/numeric? token)))
+    token ; if string and not numeric, return the string
 
     ; must be a number then
     :else
