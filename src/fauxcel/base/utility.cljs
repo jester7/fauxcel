@@ -1,14 +1,9 @@
 (ns fauxcel.base.utility
-  (:require
-   [reagent.core :as r]
+  (:require 
    [reagent.ratom]
    [fauxcel.base.state :as state :refer [cells-map current-selection current-formula]]
    [fauxcel.util.dom :as dom :refer [querySelector]]
    [fauxcel.base.constants :as c]))
-
-;; ---------------------------------------------
-;; copied from my ClojureScript7 project
-;; ---------------------------------------------
 
 (def ^:const cells-parent-selector ".cellgrid.wrapper")
 (def ^:const max-cols 27)
