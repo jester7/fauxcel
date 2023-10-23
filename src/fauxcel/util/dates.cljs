@@ -6,12 +6,24 @@
 
 (def ^:const default-separator "/")
 
+; regex to check for date format of mm/dd/yyyy or dd/mm/yyyy or yyyy/mm/dd
+(def ^:const is-date-re #"^([0-9]{1,4})[\/-]([0-9]{1,2})[\/-]([0-9]{4})$")
+
+(defn date? [some-date]
+  (cond
+    (number? some-date) false
+    :else
+    (re-seq is-date-re some-date)))
+
 ;; return a string of the current day or current day plus optional number of days
 (defn today
   ([] (today 0 default-separator)) ; if called with no args, returns today's date with default separator
   ([plus-days] (today plus-days default-separator))
   ([plus-days separator]
    (let [date (js/Date.)]
+     (println "date: " date (str (+ (.getMonth date) 1) separator ; add 1 because .getMonth starts months at zero
+                            (+ (.getDate date) plus-days) separator
+                            (.getFullYear date)))
      (str (+ (.getMonth date) 1) separator ; add 1 because .getMonth starts months at zero
           (+ (.getDate date) plus-days) separator
           (.getFullYear date)))))
