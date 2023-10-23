@@ -3,12 +3,7 @@
    [clojure.string :as s]
    [fauxcel.util.collections :as c]))
 
-;; ---------------------------------------------
-;; copied from my ClojureScript7 project
-;;    some of these functions are not used in this project
-;;    or may not be the most react way to do things
-;;    because I was still figuring out how to use reagent at the time
-;; ---------------------------------------------
+;;; Various DOM utility functions
 
 (defn querySelector [selector]
   (js/document.querySelector selector))
@@ -42,17 +37,15 @@
         (.setAttribute el "class"
                ; remove the class to be swapped then add the new class
                ; join classes vector with spaces again and set the className property on the element
-              (s/join " " (concat (c/remove-val-from-vector classes from-class) [to-class])))))))
+                       (s/join " " (concat (c/remove-val-from-vector classes from-class) [to-class])))))))
 
 (defn remove-class [el class]
   (swap-class el class " "))
-
 
 (defn toggle-class [el class]
   (if (contains-class? el class)
     (swap-class el class " ")
     (add-class-name el class)))
-
 
 ;; Todo: toggle enabled and disabled classes
 (defn set-enabled-class [el]
@@ -72,7 +65,6 @@
    (input-enable el)
    (when set-class? (remove-class el "disabled"))))
 
-
 (defn touch-device? []
   (or (.hasOwnProperty js/window "ontouchstart")
       (.hasOwnProperty (.-navigator js/window) "msMaxTouchPoints")))
@@ -91,7 +83,6 @@
   (set! (.-width @canvas) (.-offsetWidth @canvas))
   (set! (.-height @canvas) (.-offsetHeight @canvas))
   (reset! ctx (.getContext @canvas "2d")))
-
 
 (defn ctx-menu-disable []
   (fn [e] (.preventDefault e)
