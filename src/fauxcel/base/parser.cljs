@@ -280,6 +280,5 @@
     ;; Assuming the expression was a valid one, the last item is the final result.
     (eval-token (peek @out-stack)))) ; handle edge case where formula is a single cell reference
 
-
 (defn parse-formula [formula-str]
   (r/track! #(infix-expression-eval formula-str)))
