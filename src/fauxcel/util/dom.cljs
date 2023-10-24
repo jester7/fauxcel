@@ -6,6 +6,7 @@
 ;;; Various DOM utility functions
 
 (defn querySelector [selector]
+  (println "querySelector" selector)
   (js/document.querySelector selector))
 
 (defn querySelectorAll [selector]
