@@ -1,7 +1,7 @@
 (ns fauxcel.base.utility
-  (:require 
+  (:require
    [reagent.ratom]
-   [fauxcel.base.state :as state :refer [cells-map current-selection current-formula]]
+   [fauxcel.base.state :as state :refer [cells-map current-selection current-formula edit-mode]]
    [fauxcel.util.dom :as dom :refer [querySelector]]
    [fauxcel.base.constants :as c]))
 
@@ -9,13 +9,16 @@
 (def ^:const max-cols 27)
 (def ^:const max-rows 101)
 
+(defn num-to-char [num]
+  (char (+ num 64)))
+
 (defn is-formula? [str]
   (= (get str 0) "="))
 
 (defn cell-ref
   ([cell] (cell-ref (:row cell) (:col cell))) ; if single arg, assumes map with :row and :col
   ([row col]
-   (str (char (+ col 64)) row)))
+   (str (num-to-char col) row)))
 
 (defn el-by-cell-ref [cell-ref]
   (querySelector (str "#" cell-ref)))
@@ -69,9 +72,8 @@
   (let [matches (re-matches c/cell-ref-re cell-ref)]
     {:row (js/parseInt (matches 2)) :col (matches 1)}))
 
-(defn col-labels [] ; TODO / not being used yet, move col labels out of main spreadsheet div and sync scrolling 
-  (for [col (range 1 max-cols)]
-    [:span.col-label {:key (str "col-label-" (char (+ col 64)))} (char (+ col 64))]))
+(defn col-label [col-num]
+  [:span.col-label {:key (str "col-label-" (num-to-char col-num))} (num-to-char col-num)])
 
 (defn cell-ref-for-input [^js/HTMLElement input-el]
   (cell-ref (js/parseInt (-> input-el .-dataset .-row)) (js/parseInt (-> input-el .-dataset .-col))))
@@ -81,7 +83,7 @@
   ([row col] (@cells-map (cell-ref row col))))
 
 (defn cell-value-for
-  ([cell-ref] (println "cell-value-for: " cell-ref (:value (@cells-map cell-ref))) (:value (@cells-map cell-ref)))
+  ([cell-ref] (:value (@cells-map cell-ref)))
   ([row col] (:value (@cells-map (cell-ref row col)))))
 
 
@@ -110,8 +112,9 @@
 
 (defn update-selection!
   ([el] (update-selection! el false))
-  ([el get-formula?]
-   (when (not= @current-selection "") (dom/remove-class (querySelector (str "#" @current-selection)) "selected"))
+  ([el get-formula?] 
+   (when (not= @current-selection "") 
+     (dom/remove-class (querySelector (str "#" @current-selection)) "selected")) 
    (dom/add-class-name el "selected")
    (reset! current-selection (cell-ref-for-input el))
    (.focus el)
@@ -123,7 +126,7 @@
        (reset! current-formula formula)
        (reset! current-formula value))
      (when get-formula?
-       (set! (-> el .-value) formula)))))
+       (set! (-> el .-value) (if (nil? formula) value formula))))))
 
 (defn keyboard-navigation [] ; TODO getting too long, split into more functions
   {:on-key-down
@@ -132,49 +135,92 @@
        (case (.-key e)
          "ArrowUp" (doall (let [rc (row-col-for-el curr-cell)
                                 rc-new {:row (dec (:row rc)) :col (:col rc)}]
-                            (when (> (:row rc) 1)
+                            (when (and (not @edit-mode) (> (:row rc) 1))
+                              (set! (.-readOnly curr-cell) true)
                               (scroll-to-cell (cell-ref rc-new) true)
                               (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
          "ArrowDown" (doall (let [rc (row-col-for-el curr-cell)
                                   rc-new {:row (inc (:row rc)) :col (:col rc)}]
-                              (when (< (:row rc) (dec max-rows))
+                              (when (and (not @edit-mode) (< (:row rc) (dec max-rows)))
+                                (set! (.-readOnly curr-cell) true)
                                 (scroll-to-cell (cell-ref rc-new) true)
                                 (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
          "ArrowLeft" (doall (let [rc (row-col-for-el curr-cell)
                                   rc-new {:row (:row rc) :col (dec (:col rc))}]
-                              (when (> (:col rc) 1)
+                              (when (and (not @edit-mode) (> (:col rc) 1))
+                                (set! (.-readOnly curr-cell) true)
                                 (scroll-to-cell (cell-ref rc-new) true)
                                 (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
          "ArrowRight" (doall (let [rc (row-col-for-el curr-cell)
                                    rc-new {:row (:row rc) :col (inc (:col rc))}]
-                               (when (< (:col rc) (dec max-cols))
+                               (when (and (not @edit-mode) (< (:col rc) (dec max-cols)))
+                                 (set! (.-readOnly curr-cell) true)
                                  (scroll-to-cell (cell-ref rc-new) true)
                                  (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
-         "Enter" (doall (set! (.-readOnly curr-cell) false)
-                        (.focus curr-cell))
-         "Escape" (js/console.log "escape")
-         (set! (-> e .-target .-readOnly) false)
-                 ;(set! (.-value (.-target e)) (.-key e))
-                 ;(.focus curr-cell)
-         )))})
+         "Tab" (doall (let [rc (row-col-for-el curr-cell)
+                            rc-new {:row (:row rc) :col (inc (:col rc))}]
+                        (reset! edit-mode false)
+                        (set! (.-readOnly curr-cell) true)
+                        (when (< (:col rc) (dec max-cols))
+                          (scroll-to-cell (cell-ref rc-new) true)
+                          (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
+         "Enter" (let [rc (row-col-for-el curr-cell)]
+                   (if (not @edit-mode)
+                     (do ; edit mode is false, so enter edit mode
+                       (reset! edit-mode true)
+                       (set! (.-readOnly curr-cell) false)
+                       (update-selection! (querySelector (str "#" (cell-ref (:row rc) (:col rc)))) true)
+                       (.focus curr-cell))
+                     (do ; edit mode is true, so exit edit mode and move down a row if not at max already
+                       (reset! edit-mode false)
+                       (set! (.-readOnly curr-cell) true)
+                       (update-selection! (querySelector (str "#" (cell-ref (if (< (:row rc) (dec max-rows))
+                                                                              (inc (:row rc))
+                                                                              (:row rc))
+                                                                            (:col rc))))))))
+         "Escape" (when @edit-mode
+                    (let [rc (row-col-for-el curr-cell)
+                          cell-r (cell-ref rc)
+                          cell-map ; ignore changes and get original value
+                          {:formula (:formula (@cells-map cell-r))
+                           :format (:format (@cells-map cell-r))
+                           :value (:value (@cells-map cell-r))}]
+                      (println "Escape pressed; cell-map: " cell-map)
+                      (reset! edit-mode false)
+                      (set! (.-readOnly curr-cell) true)
+                      (swap! cells-map
+                             assoc cell-r cell-map) ; reset cell to original value
+                      (set! (-> e .-target .-value) (recursive-deref (:value cell-map)))))
 
-(defn handle-cell-blur [^js/HTMLElement cell-el parser]
-    (when (changed? cell-el)
-      (set! (-> cell-el .-readOnly) true) ; set back to readonly
-      (let [val (-> cell-el .-value)
-            row (js/parseInt (-> cell-el .-dataset .-row))
-            col (js/parseInt (-> cell-el .-dataset .-col))
-            cell-r (cell-ref row col)]
-        (when (not= val "") ; don't update the map if value is empty string
-          (let [c-map {:formula (if (is-formula? val) val (:formula (@cells-map cell-r)))  ;(or (:formula (@cells-map cell-ref)) val)
-                       :format ""
-                       :value (if (is-formula? val) (parser val) val)
-                                                       ;; :update-count (inc (:update-count (@cells-map cell-ref)))
-                       }]
-            (set! (-> cell-el .-value) (deref-or-val (:value c-map)))
-            (swap! cells-map
-                   assoc (cell-ref row col) c-map))))
-      (not-changed! cell-el)))
+         (when (not @edit-mode) ; default case, any other key pressed enter edit mode if not already
+           (set! (-> e .-target .-value) "")
+           (set! (-> e .-target .-readOnly) false)
+           (reset! edit-mode true)
+           ;(update-selection! (.-target e))
+           ))))})
 
-(defn num-to-char [num]
-  (char (+ num 64)))
+(defn get-cell-row [^js/HTMLElement cell-el]
+  (js/parseInt (-> cell-el .-dataset .-row)))
+
+(defn get-cell-col [^js/HTMLElement cell-el]
+  (js/parseInt (-> cell-el .-dataset .-col)))
+
+(defn handle-cell-blur
+  ;([^js/HTMLElement cell-el] (handle-cell-blur cell-el parser/parse-formula))
+  [^js/HTMLElement cell-el parser]
+  (when (changed? cell-el)
+    (reset! edit-mode false)
+    (set! (-> cell-el .-readOnly) true) ; set back to readonly
+    (let [element-val (-> cell-el .-value)
+          ;; if empty, set to nil because math functions count nil as 0 but fail on empty string ""
+          val (if (= element-val "") nil element-val)
+          row (get-cell-row cell-el)
+          col (get-cell-col cell-el)
+          cell-r (cell-ref row col)
+          c-map {:formula (if (is-formula? val) val (:formula (@cells-map cell-r)))
+                 :format ""
+                 :value (if (is-formula? val) (parser val) val)}] ; invoke parser if formula, else just set value
+      (set! (-> cell-el .-value) (deref-or-val (:value c-map)))
+      (swap! cells-map
+             assoc (cell-ref row col) c-map))
+    (not-changed! cell-el)))
