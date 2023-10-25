@@ -82,18 +82,19 @@
 
 (defn expand-cell-range [range-str]
   (println "expand-cell-range was passed range-str: " range-str)
+  (let [range-str-upper (s/upper-case range-str)]
   (cond
     (cell-range? range-str)
-    (let [matches (re-matches c/cell-range-start-end-re range-str)
-          start-cell (s/upper-case (matches 1))
-          end-cell (s/upper-case (matches 2))
+    (let [matches (re-matches c/cell-range-start-end-re range-str-upper)
+          start-cell (matches 1)
+          end-cell (matches 2)
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)]
       (flatten (for [col (range (.charCodeAt (:col start)) (inc (.charCodeAt (:col end))))]
                  (for [row (range (:row start) (inc (:row end)))]
                    (str (char col) row)))))
     :else
-    nil))
+    nil)))
 
 (defn strip-whitespace [input-str] ; discards whitespace, used before tokenizing
   (s/replace input-str #"\s(?=(?:\"[^\"]*\"|[^\"])*$)" ""))
@@ -104,9 +105,9 @@
         expanded-refs (s/replace expression-str
                                  cell-ref-re
                                  #(str (s/join "," (expand-cell-range (%1 0)))))]
-    (println "expression-str: " expression-str)
-    (println "expanded-refs: " expanded-refs)
-    (println ">>> tokenize-re: " (re-seq tokenize-re (strip-whitespace expanded-refs)))
+    ;(println "expression-str: " expression-str)
+    ;(println "expanded-refs: " expanded-refs)
+    ;(println ">>> tokenize-re: " (re-seq tokenize-re (strip-whitespace expanded-refs)))
     (re-seq tokenize-re (s/upper-case (strip-whitespace expanded-refs)))))
 
 ;;; Scans tokens for minus signs and determines if the minus sign should
@@ -225,12 +226,13 @@
   (let [reversed-expr (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression)))
         op-stack (atom ())
         arity-stack (atom ())
-        out-stack (atom ())]
-    (println "infix-expression: " infix-expression)
-    (println "tokenized-expr: " (tokenize-as-str infix-expression))
-    (println "after swap-unary-minus: " (swap-unary-minus (tokenize-as-str infix-expression)))
-    (println "after swap-parentheses: " (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression))))
-    (println "reversed-expr: " reversed-expr)
+        out-stack (atom ())
+        time-stamp-start (js/Date.now())]
+    ;(println "infix-expression: " infix-expression)
+    ;(println "tokenized-expr: " (tokenize-as-str infix-expression))
+    ;(println "after swap-unary-minus: " (swap-unary-minus (tokenize-as-str infix-expression)))
+    ;(println "after swap-parentheses: " (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression))))
+    ;(println "reversed-expr: " reversed-expr)
     (dotimes [i (count reversed-expr)]
 
       (let [token (nth reversed-expr i)]
@@ -277,6 +279,7 @@
             (swap! op-stack conj token)))))
     ;; Once all tokens have been processed, pop and eval the stacks while op stack is not empty.
     (pop-stack-while! #(seq @op-stack) op-stack out-stack arity-stack)
+    (println "---> infix-expression-eval took: " (- (js/Date.now) time-stamp-start) "ms")
     ;; Assuming the expression was a valid one, the last item is the final result.
     (eval-token (peek @out-stack)))) ; handle edge case where formula is a single cell reference
 
