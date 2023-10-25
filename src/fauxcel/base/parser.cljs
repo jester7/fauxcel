@@ -52,35 +52,35 @@
 
 (def tokenize-re dynamic-tokenize-re)
 
-(defn get-function [token-str]
+(defn get-function [^string token-str]
   (if (nil? token-str)
     nil
     (functions (s/upper-case token-str))))
 
-(defn function? [token-str]
+(defn function? ^boolean [token-str]
   (cond
     (nil? token-str) false
     (number? token-str) false
     :else (not (nil? (get-function token-str)))))
 
-(defn operator? [token-str]
+(defn operator? ^boolean [^string token-str]
   (not (nil? (operators token-str))))
 
-(defn operand? [token-str]
+(defn operand? ^boolean [^string token-str]
   (and (not= left-p token-str) (not= comma token-str) (not (function? token-str)) (not= right-p token-str) (nil? (operators token-str))))
 
-(defn get-arity [token-str]
+(defn get-arity [^string token-str]
   (cond
     (function? token-str) (:arity (get-function token-str))
     (operator? token-str) 2
     :else 0))
 
-(defn cell-range? [token]
+(defn cell-range? ^boolean [token]
   (if (string? token)
     (not (nil? (re-seq c/cell-range-check-re token)))
     false))
 
-(defn expand-cell-range [range-str]
+(defn expand-cell-range [^string range-str]
   (println "expand-cell-range was passed range-str: " range-str)
   (let [range-str-upper (s/upper-case range-str)]
   (cond
@@ -96,11 +96,11 @@
     :else
     nil)))
 
-(defn strip-whitespace [input-str] ; discards whitespace, used before tokenizing
+(defn strip-whitespace ^string [^string input-str] ; discards whitespace, used before tokenizing
   (s/replace input-str #"\s(?=(?:\"[^\"]*\"|[^\"])*$)" ""))
 
 ;;; Turns an algebraic expression string into a sequence of strings with individual tokens 
-(defn tokenize-as-str [expression-str]
+(defn tokenize-as-str [^string expression-str]
   (let [cell-ref-re c/cell-range-re
         expanded-refs (s/replace expression-str
                                  cell-ref-re
@@ -142,7 +142,7 @@
 (defn precedence [v]
   (or (:precedence (operators v)) 0))
 
-(defn cell-ref? [val] ; fix regex and move to constants
+(defn cell-ref? ^boolean [val] ; fix regex and move to constants
   (cond
     (= "" val) false
     (number? val) false
@@ -283,5 +283,5 @@
     ;; Assuming the expression was a valid one, the last item is the final result.
     (eval-token (peek @out-stack)))) ; handle edge case where formula is a single cell reference
 
-(defn parse-formula [formula-str]
+(defn parse-formula [^string formula-str]
   (r/track! #(infix-expression-eval formula-str)))

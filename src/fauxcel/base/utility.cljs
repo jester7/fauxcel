@@ -10,7 +10,7 @@
 (defn num-to-char [num]
   (char (+ num 64)))
 
-(defn is-formula? [str]
+(defn is-formula? ^boolean [str]
   (= (get str 0) "="))
 
 (defn cell-ref
@@ -82,7 +82,7 @@
   ([cell-ref] (:value (@cells-map cell-ref)))
   ([row col] (:value (@cells-map (cell-ref row col)))))
 
-(defn derefable? [val]
+(defn derefable? ^boolean [val]
   (or (instance? cljs.core/Atom val)
       (instance? reagent.ratom/RAtom val)
       (instance? reagent.ratom/RCursor val)
