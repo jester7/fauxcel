@@ -8,7 +8,7 @@
                                                cell-ref-for-input]]))
 
 (defn cellgrid []
-  [:div.cellgrid.wrapper (base-util/keyboard-navigation)
+  [:div.cellgrid.wrapper {:on-key-down base-util/keyboard-navigation}
    (doall (for [row (range 0 max-rows)]
             [:div.row.wrapper {:key (str "row" row)}
              [:span.row-label row]
