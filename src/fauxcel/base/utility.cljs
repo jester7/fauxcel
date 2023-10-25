@@ -208,6 +208,7 @@
 (defn handle-cell-blur
   ;([^js/HTMLElement cell-el] (handle-cell-blur cell-el parser/parse-formula))
   [^js/HTMLElement cell-el parser]
+  (println "handle-cell-blur called " (.-id cell-el))
   (when (changed? cell-el)
     (reset! edit-mode false)
     (set! (-> cell-el .-readOnly) true) ; set back to readonly
