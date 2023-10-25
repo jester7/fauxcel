@@ -11,3 +11,11 @@
 (def ^:const is-numeric-re #"^[+-]?(?:\d*[\.\,])?\d*$")
 
 (def ^:const empty-cell {:formula "" :format "" :value ""})
+
+(def ^:const key-Enter "Enter")
+(def ^:const key-ArrowUp "ArrowUp")
+(def ^:const key-ArrowDown "ArrowDown")
+(def ^:const key-ArrowLeft "ArrowLeft")
+(def ^:const key-ArrowRight "ArrowRight")
+(def ^:const key-Tab "Tab")
+(def ^:const key-Escape "Escape")
