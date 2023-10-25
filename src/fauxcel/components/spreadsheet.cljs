@@ -3,12 +3,13 @@
    [fauxcel.base.state :as state :refer [cells-map edit-mode current-selection]]
    [fauxcel.base.constants :as constants :refer [max-cols max-rows]]
    [fauxcel.base.parser :as parser]
+   [fauxcel.base.keyboard-handlers :as keyboard-handlers :refer [keyboard-navigation]]
    [fauxcel.base.utility :as base-util :refer [update-selection! col-label
                                                selection-cell-ref recursive-deref
                                                cell-ref-for-input]]))
 
 (defn cellgrid []
-  [:div.cellgrid.wrapper {:on-key-down base-util/keyboard-navigation}
+  [:div.cellgrid.wrapper {:on-key-down keyboard-navigation}
    (doall (for [row (range 0 max-rows)]
             [:div.row.wrapper {:key (str "row" row)}
              [:span.row-label row]
