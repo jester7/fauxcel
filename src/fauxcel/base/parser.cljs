@@ -52,55 +52,55 @@
 
 (def tokenize-re dynamic-tokenize-re)
 
-(defn get-function [token-str]
+(defn get-function [^string token-str]
   (if (nil? token-str)
     nil
     (functions (s/upper-case token-str))))
 
-(defn function? [token-str]
+(defn function? ^boolean [token-str]
   (cond
     (nil? token-str) false
     (number? token-str) false
     :else (not (nil? (get-function token-str)))))
 
-(defn operator? [token-str]
+(defn operator? ^boolean [^string token-str]
   (not (nil? (operators token-str))))
 
-(defn operand? [token-str]
+(defn operand? ^boolean [^string token-str]
   (and (not= left-p token-str) (not= comma token-str) (not (function? token-str)) (not= right-p token-str) (nil? (operators token-str))))
 
-(defn get-arity [token-str]
+(defn get-arity [^string token-str]
   (cond
     (function? token-str) (:arity (get-function token-str))
     (operator? token-str) 2
     :else 0))
 
-(defn cell-range? [token]
+(defn cell-range? ^boolean [token]
   (if (string? token)
     (not (nil? (re-seq c/cell-range-check-re token)))
     false))
 
-(defn expand-cell-range [range-str]
+(defn expand-cell-range [^string range-str]
   (println "expand-cell-range was passed range-str: " range-str)
   (let [range-str-upper (s/upper-case range-str)]
-  (cond
-    (cell-range? range-str)
-    (let [matches (re-matches c/cell-range-start-end-re range-str-upper)
-          start-cell (matches 1)
-          end-cell (matches 2)
-          start (row-col-for-cell-ref start-cell)
-          end (row-col-for-cell-ref end-cell)]
-      (flatten (for [col (range (.charCodeAt (:col start)) (inc (.charCodeAt (:col end))))]
-                 (for [row (range (:row start) (inc (:row end)))]
-                   (str (char col) row)))))
-    :else
-    nil)))
+    (cond
+      (cell-range? range-str)
+      (let [matches (re-matches c/cell-range-start-end-re range-str-upper)
+            start-cell (matches 1)
+            end-cell (matches 2)
+            start (row-col-for-cell-ref start-cell)
+            end (row-col-for-cell-ref end-cell)]
+        (flatten (for [col (range (.charCodeAt (:col start)) (inc (.charCodeAt (:col end))))]
+                   (for [row (range (:row start) (inc (:row end)))]
+                     (str (char col) row)))))
+      :else
+      nil)))
 
-(defn strip-whitespace [input-str] ; discards whitespace, used before tokenizing
+(defn strip-whitespace ^string [^string input-str] ; discards whitespace, used before tokenizing
   (s/replace input-str #"\s(?=(?:\"[^\"]*\"|[^\"])*$)" ""))
 
 ;;; Turns an algebraic expression string into a sequence of strings with individual tokens 
-(defn tokenize-as-str [expression-str]
+(defn tokenize-as-str [^string expression-str]
   (let [cell-ref-re c/cell-range-re
         expanded-refs (s/replace expression-str
                                  cell-ref-re
@@ -116,7 +116,7 @@
 ;;; with parentheses. This effectively makes unary minus the highest priority
 ;;; operator (same as Excel, Numbers and Google Sheets).
 (defn swap-unary-minus [infix-tokens]
-  (loop [original-tokens (seq infix-tokens)
+  (loop [original-tokens (into [] infix-tokens)
          prev-token nil ; nil at start of loop
          prev-token-unary? false ; false at start of loop
          new-tokens []] ; as tokens are processed they are added to vector
@@ -136,13 +136,13 @@
                  (if prev-token-unary? ; else check unary flag for previous token
                    (conj new-tokens token ")") ; if the previous token was unary -, conj token and closing parenthesis
                    (conj new-tokens token))))) ; else just add the token and nothing extra
-      (seq new-tokens))))
+      new-tokens)))
 
 ;;; Looks up the precedence value from the operators map. Returns 0 if not found.
 (defn precedence [v]
   (or (:precedence (operators v)) 0))
 
-(defn cell-ref? [val] ; fix regex and move to constants
+(defn cell-ref? ^boolean [val] ; fix regex and move to constants
   (cond
     (= "" val) false
     (number? val) false
@@ -162,6 +162,10 @@
 ;;; or the text in the cell (nil if empty) or the numeric value.
 (defn eval-token [token]
   (cond
+    ; If cell ref, evaluate and return 
+    (cell-ref? token) ; moved this cond up for formulas with many cell refs, slight performance boost maybe?
+    (util/recursive-deref (eval-cell-ref token))
+
     ; If it's an operator, return the function
     (:fn (operators token)) ; (operators token) returns nil if not found
     (:fn (operators token))
@@ -169,12 +173,8 @@
     (function? token)
     (:fn (get-function token))
 
-    (cell-range? token) ; TODO check if safe to delete; moved cell range expansion to tokenizer
-    (expand-cell-range token)
-
-    ; If cell ref, evaluate and return 
-    (cell-ref? token)
-    (util/recursive-deref (eval-cell-ref token))
+    ;(cell-range? token) ; TODO check if safe to delete; moved cell range expansion to tokenizer
+    ;(expand-cell-range token) 
 
     (and (string? token) (not (m/numeric? token)))
     token ; if string and not numeric, return the string
@@ -192,54 +192,52 @@
           (= token left-p) (swap! new-expression assoc i right-p)
           (= token right-p) (swap! new-expression assoc i left-p)
           :else (swap! new-expression assoc i token))))
-    (into () @new-expression))) ; reverses when going from vector to list
-
+    @new-expression))
 
 ;;; Pops the operator stack while the predicate function evaluates to true and
 ;;; pushes the result to the output/operand stack. Used by infix-expression-eval
 (defn pop-stack-while! [predicate op-stack out-stack arity-stack]
-  (while (predicate)
-    (let [op-or-fn-token (peek @op-stack)
-          func? (function? op-or-fn-token) ; unlike built-in fn? , function? only returns true for non operator functions in function map
-          nil-equals-zero? (cond (operator? op-or-fn-token)
-                                 (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
-                                 (function? op-or-fn-token)
-                                 (:nil-equals-zero? (get-function op-or-fn-token))) ; get nil-equals-zero? flag from functions map
-          arity (if func? (peek @arity-stack) 2)] ; assume binary operator if not a function 
-      (when func? (swap! arity-stack pop))
-      (reset! out-stack
-              (conj
-               (nthrest @out-stack arity) ; pop operands equal to arity of func
-               (apply (eval-token op-or-fn-token)
-                      (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
-                              (or (eval-token %1) 0) ; replace nil with 0
-                              (eval-token %1)) ; else just eval the token
-                           (take arity @out-stack)))))
-      (swap! op-stack pop))))
+    (while (predicate)
+      (let [op-or-fn-token (peek @op-stack)
+            func? (function? op-or-fn-token) ; unlike built-in fn? , function? only returns true for non operator functions in function map
+            nil-equals-zero? (cond (operator? op-or-fn-token)
+                                   (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
+                                   (function? op-or-fn-token)
+                                   (:nil-equals-zero? (get-function op-or-fn-token))) ; get nil-equals-zero? flag from functions map
+            arity (if func? (peek @arity-stack) 2)] ; assume binary operator if not a function 
+        (when func? (swap! arity-stack pop))
+        (reset! out-stack
+                (conj
+                 (nthrest @out-stack arity) ; pop operands equal to arity of func
+                 (apply (eval-token op-or-fn-token)
+                        (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
+                                (or %1 0) ; replace nil with 0
+                                %1) ; else just eval the token
+                             (take arity @out-stack))))) 
+        (swap! op-stack pop))))
 
-
-
-;;; Parses any infix algebraic expression string into individual tokens and
-;;; evaluates the expression.
+;;; Parses any tokenized infix algebraic expression and returns the result.
+;;; TODO After switching to vectors in all of the eval functions,
+;;; I've now got a weird mix of an infix expression vector with swapped parentheses
+;;; and having to process the vector in reverse order. TODO investigate and simplify.
+;;; Performance has increased over 12x from the original version
+;;; when processing ranges with 1000's of cells so I'm leaving as is for now.
+;;; TODO Potential improvement idea: eval all tokens in place and return vector of
+;;; operands, operators, functions, etc. Then offload to web worker to eval the vector.
+;;; Parentheses handling would be done by having vectors within vectors.
 ;;; TODO catch exceptions and return error msg or throw exception
-(defn infix-expression-eval [infix-expression] ; converts infix to prefix and evals, returns numeric result
-  (let [reversed-expr (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression)))
+(defn infix-expression-eval [reversed-expr]
+  (let [num-items (count reversed-expr)
         op-stack (atom ())
         arity-stack (atom ())
-        out-stack (atom ())
-        time-stamp-start (js/Date.now())]
-    ;(println "infix-expression: " infix-expression)
-    ;(println "tokenized-expr: " (tokenize-as-str infix-expression))
-    ;(println "after swap-unary-minus: " (swap-unary-minus (tokenize-as-str infix-expression)))
-    ;(println "after swap-parentheses: " (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression))))
-    ;(println "reversed-expr: " reversed-expr)
-    (dotimes [i (count reversed-expr)]
+        out-stack (atom ())] 
+    (dotimes [i num-items]
 
-      (let [token (nth reversed-expr i)]
+      (let [token (reversed-expr (- num-items i 1))]
         (cond
           ; if operand, adds it to the operand stack
           (operand? token)
-          (swap! out-stack conj token)
+          (swap! out-stack conj (eval-token token))
 
           ; left parenthesis 
           (= left-p token)
@@ -279,9 +277,16 @@
             (swap! op-stack conj token)))))
     ;; Once all tokens have been processed, pop and eval the stacks while op stack is not empty.
     (pop-stack-while! #(seq @op-stack) op-stack out-stack arity-stack)
-    (println "---> infix-expression-eval took: " (- (js/Date.now) time-stamp-start) "ms")
     ;; Assuming the expression was a valid one, the last item is the final result.
     (eval-token (peek @out-stack)))) ; handle edge case where formula is a single cell reference
 
-(defn parse-formula [formula-str]
-  (r/track! #(infix-expression-eval formula-str)))
+(defn infix-expression-prepare [infix-expression]
+  (let [reversed-expr (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression)))
+        time-stamp-start (js/Date.now ()) ; for performance testing / TODO remove once satisfied
+        result (infix-expression-eval reversed-expr)]
+    (println "infix-expression was: " infix-expression)
+    (println "---> infix-expression-eval took: " (- (js/Date.now) time-stamp-start) "ms")
+    result))
+
+(defn parse-formula [^string formula-str]
+  (r/track! #(infix-expression-prepare formula-str)))
