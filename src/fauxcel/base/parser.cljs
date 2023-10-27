@@ -6,7 +6,8 @@
    [fauxcel.base.utility :as util :refer
     [cell-value-for row-col-for-cell-ref]]
    [fauxcel.base.constants :as c]
-   [fauxcel.util.dates :as dates]))
+   [fauxcel.util.dates :as dates]
+   [fauxcel.util.debug :as debug :refer [debug-log debug-log-detailed do-with-timer]]))
 
 ;;; This file contains the core parser functions for evaluating formulas
 ;;; including algebraic expressions, functions and cell references.
@@ -81,7 +82,7 @@
     false))
 
 (defn expand-cell-range [^string range-str]
-  (println "expand-cell-range was passed range-str: " range-str)
+  (debug-log "expand-cell-range was passed range-str: " range-str)
   (let [range-str-upper (s/upper-case range-str)]
     (cond
       (cell-range? range-str)
@@ -116,6 +117,7 @@
 ;;; with parentheses. This effectively makes unary minus the highest priority
 ;;; operator (same as Excel, Numbers and Google Sheets).
 (defn swap-unary-minus [infix-tokens]
+  (debug-log-detailed "(swap-unary-minus) infix-tokens arg: " infix-tokens)
   (loop [original-tokens (into [] infix-tokens)
          prev-token nil ; nil at start of loop
          prev-token-unary? false ; false at start of loop
@@ -185,6 +187,7 @@
 
 ;;; Needed to handle parentheses swapping for expression reversal
 (defn swap-parentheses [expression] ; turns "(" into ")" and vice versa
+  (debug-log-detailed "swap-parentheses expression arg: " expression)
   (let [new-expression (atom [])]
     (dotimes [i (count expression)]
       (let [token (nth expression i)]
@@ -192,29 +195,30 @@
           (= token left-p) (swap! new-expression assoc i right-p)
           (= token right-p) (swap! new-expression assoc i left-p)
           :else (swap! new-expression assoc i token))))
+    (debug-log-detailed "swap-parentheses returning new-expression: " @new-expression)
     @new-expression))
 
 ;;; Pops the operator stack while the predicate function evaluates to true and
 ;;; pushes the result to the output/operand stack. Used by infix-expression-eval
 (defn pop-stack-while! [predicate op-stack out-stack arity-stack]
-    (while (predicate)
-      (let [op-or-fn-token (peek @op-stack)
-            func? (function? op-or-fn-token) ; unlike built-in fn? , function? only returns true for non operator functions in function map
-            nil-equals-zero? (cond (operator? op-or-fn-token)
-                                   (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
-                                   (function? op-or-fn-token)
-                                   (:nil-equals-zero? (get-function op-or-fn-token))) ; get nil-equals-zero? flag from functions map
-            arity (if func? (peek @arity-stack) 2)] ; assume binary operator if not a function 
-        (when func? (swap! arity-stack pop))
-        (reset! out-stack
-                (conj
-                 (nthrest @out-stack arity) ; pop operands equal to arity of func
-                 (apply (eval-token op-or-fn-token)
-                        (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
-                                (or %1 0) ; replace nil with 0
-                                %1) ; else just eval the token
-                             (take arity @out-stack))))) 
-        (swap! op-stack pop))))
+  (while (predicate)
+    (let [op-or-fn-token (peek @op-stack)
+          func? (function? op-or-fn-token) ; unlike built-in fn? , function? only returns true for non operator functions in function map
+          nil-equals-zero? (cond (operator? op-or-fn-token)
+                                 (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
+                                 (function? op-or-fn-token)
+                                 (:nil-equals-zero? (get-function op-or-fn-token))) ; get nil-equals-zero? flag from functions map
+          arity (if func? (peek @arity-stack) 2)] ; assume binary operator if not a function 
+      (when func? (swap! arity-stack pop))
+      (reset! out-stack
+              (conj
+               (nthrest @out-stack arity) ; pop operands equal to arity of func
+               (apply (eval-token op-or-fn-token)
+                      (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
+                              (or %1 0) ; replace nil with 0
+                              %1) ; else just eval the token
+                           (take arity @out-stack)))))
+      (swap! op-stack pop))))
 
 ;;; Parses any tokenized infix algebraic expression and returns the result.
 ;;; TODO After switching to vectors in all of the eval functions,
@@ -230,7 +234,7 @@
   (let [num-items (count reversed-expr)
         op-stack (atom ())
         arity-stack (atom ())
-        out-stack (atom ())] 
+        out-stack (atom ())]
     (dotimes [i num-items]
 
       (let [token (reversed-expr (- num-items i 1))]
@@ -281,12 +285,9 @@
     (eval-token (peek @out-stack)))) ; handle edge case where formula is a single cell reference
 
 (defn infix-expression-prepare [infix-expression]
-  (let [reversed-expr (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression)))
-        time-stamp-start (js/Date.now ()) ; for performance testing / TODO remove once satisfied
-        result (infix-expression-eval reversed-expr)]
-    (println "infix-expression was: " infix-expression)
-    (println "---> infix-expression-eval took: " (- (js/Date.now) time-stamp-start) "ms")
-    result))
+  (let [reversed-expr (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression)))]
+    (debug-log "infix-expression was: " infix-expression)
+    (do-with-timer "infix-expression-eval" (infix-expression-eval reversed-expr))))
 
 (defn parse-formula [^string formula-str]
   (r/track! #(infix-expression-prepare formula-str)))
