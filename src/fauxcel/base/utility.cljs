@@ -5,7 +5,7 @@
    [fauxcel.util.dom :as dom :refer [querySelector]]
    [fauxcel.base.constants :as c]))
 
-(def ^:const cells-parent-selector ".cellgrid.wrapper")
+(def ^:const cells-parent-selector "#app")
 
 (defn num-to-char [num]
   (char (+ num 64)))
@@ -36,26 +36,30 @@
     (or (not (nil? (:formula data)))
         (is-formula? val))))
 
-(defn scroll-to-cell ; TODO needs work, check offsets of all parent els, scrolling not quite right
+(defn cell-out-of-range? [child-bounding-rect parent-bounding-rect]
+  {:horizontal (or (> (.-left child-bounding-rect) (.-left parent-bounding-rect) (.-width parent-bounding-rect))
+              (> (+ (.-left child-bounding-rect) (.-width child-bounding-rect))
+                (+ (.-left parent-bounding-rect) (.-width parent-bounding-rect))))
+  :vertical (or (> (.-top child-bounding-rect) (.-top parent-bounding-rect) (.-height parent-bounding-rect))
+            (> (+ (.-top child-bounding-rect) (.-height child-bounding-rect))
+              (+ (.-top parent-bounding-rect) (.-height parent-bounding-rect))))})
+
+(defn scroll-to-cell
   ([cell-ref] (scroll-to-cell cell-ref false true)) ; default just scroll, no range check, smooth yes
   ([cell-ref check-if-out-of-range?] (scroll-to-cell cell-ref check-if-out-of-range? true))
   ([cell-ref check-if-out-of-range? smooth-scroll?]
    (let [parent-el (querySelector cells-parent-selector)
          child-el (el-by-cell-ref cell-ref)
-         child-offset-l (-> child-el .-offsetLeft)
-         child-offset-t (-> child-el .-offsetTop)
-         parent-offset-l (-> parent-el .-offsetLeft)
-         parent-offset-t (-> parent-el .-offsetTop)
+         child-bounding-rect (-> child-el .getBoundingClientRect)
+         parent-bounding-rect (-> parent-el .getBoundingClientRect)
          smoothness (if smooth-scroll? "smooth" "auto")
-         scroll-to-info {:left (- child-offset-l parent-offset-l)
-                         :top (- child-offset-t parent-offset-t)
-                         :behavior smoothness}]
-     (if check-if-out-of-range?
-       (when (or
-              (> (- child-offset-l parent-offset-l) (.-clientWidth parent-el))
-              (> (- child-offset-t parent-offset-t) (.-clientHeight parent-el)))
-         (.scrollTo parent-el (clj->js scroll-to-info)))
-       (.scrollTo parent-el (clj->js scroll-to-info))))))
+         scroll-to-info {:left (- (.-left child-bounding-rect) (.-left parent-bounding-rect))
+                         :top (- (.-top child-bounding-rect) (.-top parent-bounding-rect))
+                         :behavior smoothness}
+         out-of-range? (cell-out-of-range? child-bounding-rect parent-bounding-rect)]
+     (when (or check-if-out-of-range? (:horizontal out-of-range?) (:vertical out-of-range?))
+       (.scrollTo parent-el (clj->js scroll-to-info)))))) ; (.scrollIntoView child-el (clj->js {:behavior (if smooth-scroll? "smooth" "auto")}))
+
 
 (defn selection-cell-ref []
   (querySelector (str cells-parent-selector " input.selected")))
