@@ -237,19 +237,24 @@ h3 {
 
 
 .cellgrid {
-  overflow: scroll;
+  height: calc(100vh - 3em);
+  width:100%;
+  overflow: auto;
 }
 
 .cellgrid .row.wrapper:first-child {
-  /* position: sticky;
-  left:0;
-  top:0; */
+  position: sticky;
+  top:0;
+  z-index: 4;
 }
 
 
 .cellgrid .row.wrapper:first-child span:first-child {
-  color: var(--cell-label-bg);
-  z-index: 100;
+  color: transparent;
+  z-index: 3;
+  position: sticky;
+  top: 0;
+  left: 0;
 }
 
 .cellgrid .col-label,
@@ -272,12 +277,13 @@ h3 {
 
 .cellgrid .row.wrapper .row-label {
   text-align: right;
-  width: 2em;
+  width: 3em;
   display: block;
   flex-shrink: 0;
   padding: 0.25em 0.2em 0.25em 0em;
   position: sticky;
   left: 0;
+  z-index: 2;
 }
 
 .cellgrid .row.wrapper .col-label {
@@ -286,6 +292,7 @@ h3 {
   width: var(--cell-max-width);
   flex-shrink: 0;
   padding: 0.25em;
+  z-index: 1;
 }
 
 .cellgrid .row.wrapper input {
@@ -301,10 +308,18 @@ h3 {
 .cellgrid .row.wrapper input.selected {
   background-color: var(--select-focus);
 }
-
+/* 
 #app .wrapper {
   position: relative;
+} */
+
+#app, html, body, .appwrapper {
+  /* fill viewport */
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
+
 
 #clippy {
   background-image: url('/images/clippy-head-scratch.gif');

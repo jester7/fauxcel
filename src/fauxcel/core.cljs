@@ -10,7 +10,7 @@
 ;; Views
 
 (defn home-page []
-  [:div.wrapper
+  [:div.appwrapper
    [toolbar]
    [:div#clippy]
    [cellgrid]])
