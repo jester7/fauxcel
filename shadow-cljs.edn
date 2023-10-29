@@ -7,11 +7,14 @@
                       :asset-path "/js"
                       :build-options
                       {:cache-level :jars}
-                      :compiler-options {:optimizations :advanced 
+                      :compiler-options {:optimizations :advanced
                                          :pretty-print  false
                                          :source-map false
                                          :pseudo-names false}
                       :modules    {:app {:entries [fauxcel.core]}}
-                      :devtools   {:after-load fauxcel.core/mount-root}}}
+                      :devtools   {:after-load fauxcel.core/mount-root}}
+                :serverless {:target :node-library
+                             :output-to "api/test-handler.js"
+                             :exports {:handler fauxcel.serverless.api.test-handler/handler}}}
 
  :dev-http     {3000 {:root "public"}}}
