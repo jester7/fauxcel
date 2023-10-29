@@ -13,7 +13,7 @@
                                          :pseudo-names false}
                       :modules    {:app {:entries [fauxcel.core]}}
                       :devtools   {:after-load fauxcel.core/mount-root}}
-                :serverless {:target :node-library
+                :serverless {:target :esm
                              :output-to "api/test-handler.js"
                              :exports {:default fauxcel.serverless.api.test-handler/handler}}}
 
