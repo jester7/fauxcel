@@ -179,7 +179,6 @@
 
 (defn empty-cell? [cell-ref]
   (let [data (cell-data-for cell-ref)]
-    (debug-log "empty-cell? cell-ref & data: " cell-ref data)
     (or
      (nil? data)
      (nil? (:value data))
