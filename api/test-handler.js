@@ -14,5 +14,5 @@ var shadow$provide = {};
  Copyright The Closure Library Authors.
  SPDX-License-Identifier: Apache-2.0
 */
-shadow$umd$export={handler:function(b,a){return a.send("hello world!")}};return shadow$umd$export;
+shadow$umd$export={default$:function(b,a){return a.send("hello world!")}};return shadow$umd$export;
 });

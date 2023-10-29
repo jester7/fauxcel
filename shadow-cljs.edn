@@ -15,6 +15,6 @@
                       :devtools   {:after-load fauxcel.core/mount-root}}
                 :serverless {:target :node-library
                              :output-to "api/test-handler.js"
-                             :exports {:handler fauxcel.serverless.api.test-handler/handler}}}
+                             :exports {:default fauxcel.serverless.api.test-handler/handler}}}
 
  :dev-http     {3000 {:root "public"}}}
