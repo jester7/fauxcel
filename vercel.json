@@ -1,0 +1,14 @@
+{
+    "buildCommand" : "npx shadow-cljs release app && npx shadow-cljs release serverless",
+    "builds": [
+        {
+          "src": "public/**/*",
+          "use": "@vercel/static"
+        },
+        {
+          "src": "api/**/*.js",
+          "use": "@vercel/node"
+        }
+    ]
+  }
+  
