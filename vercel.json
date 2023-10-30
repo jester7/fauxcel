@@ -4,15 +4,12 @@
           "src": "package.json",
           "use": "@vercel/static-build",
           "config": {
-            "buildCommand": "npm run app"
+            "buildCommand": "npm run app && npm run serverless"
           }
         },
         {
           "src": "api/**/*.js",
-          "use": "@vercel/node",
-          "config": {
-            "buildCommand": "npm run serverless"
-          }
+          "use": "@vercel/node"
         }
     ]
   }
