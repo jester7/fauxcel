@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "app": "npx shadow-cljs release app",
+    "serverless": "npx shadow-cljs release serverless",
+    "watch": "npx shadow-cljs watch app",
+    "vercel-build": "npm run app && npm run serverless"
+  },
   "devDependencies": {
     "shadow-cljs": "^2.19.2"
   },
