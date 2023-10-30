@@ -15,6 +15,10 @@
                       :devtools   {:after-load fauxcel.core/mount-root}}
                 :serverless {:target :esm
                              :output-dir "api"
-                             :modules {:test-handler {:exports {default fauxcel.serverless.api.test-handler/handler}}}}}
+                             :modules {:base {:entries []}
+                                       :test-handler {:exports {default fauxcel.serverless.api.test-handler/handler}
+                                                      :depends-on #{:base}}
+                                       :test-handler2 {:exports {default fauxcel.serverless.api.test-handler2/handler}
+                                                       :depends-on #{:base}}}}}
 
  :dev-http     {3000 {:root "public"}}}
