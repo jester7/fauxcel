@@ -2,7 +2,7 @@
     "builds": [
         {
           "src": "public/**/*",
-          "use": "@vercel/static",
+          "use": "@vercel/static-build",
           "config": {
             "buildCommand": "npm run app"
           }
