@@ -14,7 +14,7 @@
                       :modules    {:app {:entries [fauxcel.core]}}
                       :devtools   {:after-load fauxcel.core/mount-root}}
                 :serverless {:target :esm
-                             :output-dir "public/api"
+                             :output-dir "api"
                              :modules {:base {:entries []}
                                        :test-handler {:exports {default fauxcel.serverless.api.test-handler/handler}
                                                       :depends-on #{:base}}
