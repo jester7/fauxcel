@@ -1,12 +1,10 @@
 {
     "builds": [
         {
-        "buildCommand": "npm run app",
           "src": "public/**/*",
           "use": "@vercel/static"
         },
         {
-            "buildCommand": "npm run serverless",
           "src": "api/**/*.js",
           "use": "@vercel/node"
         }
