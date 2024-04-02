@@ -217,7 +217,7 @@
           ; left parenthesis 
           (= left-p token)
           (swap! op-stack conj token)
-
+          
           ; right parenthesis
           (= right-p token)
           (do

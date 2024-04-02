@@ -1,6 +1,7 @@
-(ns fauxcel.base.keyboard-handlers
+(ns fauxcel.input-handlers.keyboard
   (:require
    [reagent.ratom]
+   [fauxcel.util.spreadsheet :as spreadsheet-util :refer [row-col-add]]
    [fauxcel.base.state :as state :refer [cells-map edit-mode
                                          sel-row-offset sel-col-offset]]
    [fauxcel.util.dom :as dom :refer [querySelector]]
@@ -9,17 +10,6 @@
     [update-selection! update-multi-selection! scroll-to-cell cell-ref
      selection-cell-ref recursive-deref
      row-col-for-el]]))
-
-
-(defn row-col-add [rc-map row-n col-n]
-  (let [new-row (+ (:row rc-map) row-n)
-        new-col (+ (:col rc-map) col-n)]
-    (if (or (< new-row 1)
-            (> new-row (dec c/max-rows))
-            (< new-col 1)
-            (> new-col (dec c/max-cols)))
-      rc-map ; return original if out of range
-      {:row new-row :col new-col}))) ; else return updated row/col
 
 (defn has-modifier-key? [key-press-info]
   (or (:shift? key-press-info)

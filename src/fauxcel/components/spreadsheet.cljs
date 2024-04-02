@@ -3,11 +3,11 @@
    [fauxcel.base.state :as state :refer [cells-map edit-mode current-selection]]
    [fauxcel.base.constants :as constants :refer [max-cols max-rows]]
    [fauxcel.base.parser :as parser]
-   [fauxcel.base.keyboard-handlers :as keyboard-handlers :refer [keyboard-navigation]]
+   [fauxcel.input-handlers.keyboard :as keyboard :refer [keyboard-navigation]]
+   [fauxcel.input-handlers.mouse :as mouse]
    [fauxcel.base.format :as format :refer [get-format-style]]
-   [fauxcel.base.utility :as base-util :refer [update-selection! cell-ref col-label cell-in-range?
-                                               selection-cell-ref recursive-deref
-                                               cell-ref-for-input row-in-range? col-in-range?]]))
+   [fauxcel.base.utility :as base-util :refer [cell-ref col-label cell-in-range?
+                                               row-in-range? col-in-range?]]))
 
 (defn cellgrid []
   [:div.cellgrid.wrapper {:on-key-down keyboard-navigation}
@@ -34,19 +34,7 @@
                                       (get-format-style cell-ref))
                           :on-change
                           #(base-util/changed! (.-target %1))
-                          :on-click
-                          (fn [e]
-                            (when (and @edit-mode (not= @current-selection (cell-ref-for-input (.-target e))))
-                              (when (not (nil? (selection-cell-ref)))
-                                (reset! edit-mode false)
-                                (set! (-> (selection-cell-ref) .-value)
-                                      (recursive-deref (:value (@cells-map @current-selection))))
-                                (set! (-> (selection-cell-ref) .-readOnly) true)))
-                            (update-selection! (.-target e)))
-                          :on-double-click
-                          (fn [e]
-                            (reset! edit-mode true)
-                            (update-selection! (.-target e) true)
-                            (set! (-> e .-target .-readOnly) false))
+                          :on-click mouse/click
+                          :on-double-click mouse/double-click
                           :on-blur
                           #(base-util/handle-cell-blur (.-target %1) parser/parse-formula)}]))))]))])
