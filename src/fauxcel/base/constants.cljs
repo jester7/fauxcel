@@ -31,3 +31,5 @@
 (def ^:const default-cell-sheets (mapv keyword default-cell-sheet-names))
 
 (def ^:const default-cell-sheet (first default-cell-sheets))
+
+(def ^:const cells-parent-id "#app")
