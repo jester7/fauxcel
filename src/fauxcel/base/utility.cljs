@@ -2,12 +2,12 @@
   (:require
    [clojure.string :as s]
    [reagent.ratom]
-   [fauxcel.base.state :as state :refer [cells-map current-selection current-formula edit-mode]]
+   [fauxcel.base.state :as state :refer [cells-map current-selection
+                                         current-formula edit-mode
+                                         sel-col-offset sel-row-offset]]
    [fauxcel.util.dom :as dom :refer [querySelector]]
    [fauxcel.base.constants :as c]
-   [fauxcel.util.debug :as debug :refer [debug-log]]))
-
-(def ^:const cells-parent-selector "#app")
+   [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
 (defn str-empty? [^string str]
   (or (nil? str) (= "" str)))
@@ -53,7 +53,7 @@
   ([cell-ref] (scroll-to-cell cell-ref false true)) ; default just scroll, no range check, smooth yes
   ([cell-ref check-if-out-of-range?] (scroll-to-cell cell-ref check-if-out-of-range? true))
   ([cell-ref check-if-out-of-range? smooth-scroll?]
-   (let [parent-el (querySelector cells-parent-selector)
+   (let [parent-el (querySelector c/cells-parent-id)
          child-el (el-by-cell-ref cell-ref)
          child-bounding-rect (-> child-el .getBoundingClientRect)
          parent-bounding-rect (-> parent-el .getBoundingClientRect)
@@ -67,7 +67,7 @@
 
 
 (defn selection-cell-ref []
-  (querySelector (str cells-parent-selector " input.selected")))
+  (querySelector (str c/cells-parent-id " input.selected")))
 
 (defn row-col-for-el [^js/HTMLElement el]
   {:row (js/parseInt (-> el .-dataset .-row))
@@ -110,10 +110,10 @@
 (defn update-selection!
   ([el] (update-selection! el false))
   ([el get-formula?]
-   (when (not= @current-selection "")
-     (dom/remove-class (querySelector (str "#" @current-selection)) "selected"))
-   (dom/add-class-name el "selected")
+   ;(dom/add-class-name el "selected") ; not needed, handled by setting current selection
    (reset! current-selection (cell-ref-for-input el))
+   (reset! sel-row-offset 0)
+   (reset! sel-col-offset 0)
    (.focus el)
    (let [rc (row-col-for-el el)
          data (cell-data-for (:row rc) (:col rc))
@@ -127,10 +127,10 @@
 
 (defn update-multi-selection!
   [^number start-row ^number start-col ^number end-row ^number end-col]
-  (println "update-multi-selection! start-row: " start-row " start-col: " start-col " end-row: " end-row " end-col: " end-col)
+  (debug-log-detailed "update-multi-selection! start-row: " start-row " start-col: " start-col " end-row: " end-row " end-col: " end-col)
   (let [start (cell-ref start-row start-col)
         end (cell-ref end-row end-col)
-        selection-range (str start ":" end)]
+        selection-range (if (not= start end) (str start ":" end) start)]
     (reset! current-selection selection-range)))
 
 (defn get-cell-row [^js/HTMLElement cell-el]

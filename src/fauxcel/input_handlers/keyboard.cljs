@@ -132,8 +132,8 @@
     (swap! counter-atom inc)
     @counter-atom))
 
-(defn dec-when>1 [counter-atom]
-  (if (> @counter-atom 1)
+(defn dec-when>0 [counter-atom]
+  (if (> @counter-atom 0)
     (swap! counter-atom dec)
     @counter-atom))
 
@@ -141,13 +141,13 @@
     (println "handle-keyboard-events row-offset: " @sel-row-offset " col-offset: " @sel-col-offset)
    (case (:key key-press-info)
     c/key-ArrowUp
-    (handle-keyboard-arrow-up! curr-cell key-press-info (dec-when>1 sel-row-offset) @sel-col-offset)
+    (handle-keyboard-arrow-up! curr-cell key-press-info (dec-when>0 sel-row-offset) @sel-col-offset)
 
     c/key-ArrowDown
     (handle-keyboard-arrow-down! curr-cell key-press-info (inc-when<max sel-row-offset c/max-rows) @sel-col-offset)
 
     c/key-ArrowLeft
-    (handle-keyboard-arrow-left! curr-cell key-press-info @sel-row-offset (dec-when>1 sel-col-offset))
+    (handle-keyboard-arrow-left! curr-cell key-press-info @sel-row-offset (dec-when>0 sel-col-offset))
 
     c/key-ArrowRight
     (handle-keyboard-arrow-right! curr-cell key-press-info @sel-row-offset (inc-when<max sel-col-offset c/max-cols))
