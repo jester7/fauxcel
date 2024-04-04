@@ -8,8 +8,9 @@
    [fauxcel.base.constants :as c]
    [fauxcel.base.utility :as base-util :refer
     [update-selection! update-multi-selection! scroll-to-cell cell-ref
-     selection-cell-ref recursive-deref
-     row-col-for-el]]))
+     selection-cell-ref recursive-deref row-for-el col-for-el
+     row-col-for-el]]
+   [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
 (defn has-modifier-key? [key-press-info]
   (or (:shift? key-press-info)
@@ -121,36 +122,44 @@
 (defn handle-keyboard-any-key!
   [^js/HTMLElement curr-cell key-press-info]
   (when (and (not @edit-mode) (not (nil? (:key key-press-info))) (not-modifier-key-except-shift? key-press-info))
-    (println "handle-keyboard-any-key! :key " (:key key-press-info))
+    (debug-log-detailed "handle-keyboard-any-key! :key " (:key key-press-info))
     (set! (-> curr-cell .-readOnly) false)
     (reset! edit-mode true)
     (update-selection! curr-cell true)
     (set! (-> curr-cell .-value) "")))
 
-(defn inc-when<max [counter-atom ^number max]
-  (if (< @counter-atom max)
+(defn inc-when<max! [counter-atom ^number curr-val ^number max]
+  (if (< (+ @counter-atom curr-val) max)
     (swap! counter-atom inc)
     @counter-atom))
 
-(defn dec-when>0 [counter-atom]
-  (if (> @counter-atom 0)
+(defn dec-when>0! [counter-atom  ^number curr-val]
+  (if (> (+ @counter-atom curr-val) 0)
     (swap! counter-atom dec)
     @counter-atom))
 
 (defn handle-keyboard-events [^js/HTMLElement curr-cell key-press-info]
-    (println "handle-keyboard-events row-offset: " @sel-row-offset " col-offset: " @sel-col-offset)
+    (debug-log-detailed "handle-keyboard-events row-offset: " @sel-row-offset " col-offset: " @sel-col-offset)
    (case (:key key-press-info)
     c/key-ArrowUp
-    (handle-keyboard-arrow-up! curr-cell key-press-info (dec-when>0 sel-row-offset) @sel-col-offset)
+    (handle-keyboard-arrow-up!
+     curr-cell key-press-info
+     (dec-when>0! sel-row-offset (row-for-el curr-cell)) @sel-col-offset)
 
     c/key-ArrowDown
-    (handle-keyboard-arrow-down! curr-cell key-press-info (inc-when<max sel-row-offset c/max-rows) @sel-col-offset)
+    (handle-keyboard-arrow-down!
+     curr-cell key-press-info
+     (inc-when<max! sel-row-offset (row-for-el curr-cell) c/max-rows) @sel-col-offset)
 
     c/key-ArrowLeft
-    (handle-keyboard-arrow-left! curr-cell key-press-info @sel-row-offset (dec-when>0 sel-col-offset))
+    (handle-keyboard-arrow-left!
+     curr-cell key-press-info @sel-row-offset
+     (dec-when>0! sel-col-offset (col-for-el curr-cell)))
 
     c/key-ArrowRight
-    (handle-keyboard-arrow-right! curr-cell key-press-info @sel-row-offset (inc-when<max sel-col-offset c/max-cols))
+    (handle-keyboard-arrow-right!
+     curr-cell key-press-info @sel-row-offset
+     (inc-when<max! sel-col-offset (col-for-el curr-cell) c/max-cols))
 
     c/key-Tab
     (handle-keyboard-tab! curr-cell key-press-info)
@@ -169,11 +178,15 @@
       (= key c/key-Control)
       (= key c/key-Alt)))
 
+(defn get-key-press-info
+  "returns key press data as a clojure map"
+  [e]
+  {:key (if (is-modifier-key? (.-key e)) nil (.-key e))
+   :shift? (.-shiftKey e)
+   :ctrl? (.-ctrlKey e)
+   :alt? (.-altKey e)})
+
 (defn keyboard-navigation [e]
   (let [curr-cell (selection-cell-ref)
-        key (.-key e)
-        key-press-info {:key (if (is-modifier-key? key) nil key)
-                        :shift? (.-shiftKey e)
-                        :ctrl? (.-ctrlKey e)
-                        :alt? (.-altKey e)}]
+        key-press-info (get-key-press-info e)]
     (handle-keyboard-events curr-cell key-press-info)))
