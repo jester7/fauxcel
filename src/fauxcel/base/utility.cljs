@@ -73,6 +73,12 @@
   {:row (js/parseInt (-> el .-dataset .-row))
    :col (js/parseInt (-> el .-dataset .-col))})
 
+(defn row-for-el [^js/HTMLElement el]
+  (:row (row-col-for-el el)))
+
+(defn col-for-el [^js/HTMLElement el]
+  (:col (row-col-for-el el)))
+
 (defn row-col-for-cell-ref [cell-ref]
   (let [matches (re-matches c/cell-ref-re cell-ref)]
     {:row (js/parseInt (matches 2)) :col (matches 1)}))
@@ -229,8 +235,11 @@
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)
           cell (row-col-for-cell-ref cell-ref)]
-      (and (<= (:row start) (:row cell) (:row end))
-           (<= (.charCodeAt (:col start)) (.charCodeAt (:col cell)) (.charCodeAt (:col end)))))
+      (and (or (<= (:row start) (:row cell) (:row end))
+                (>= (:row start) (:row cell) (:row end)))
+           (or
+            (<= (.charCodeAt (:col start)) (.charCodeAt (:col cell)) (.charCodeAt (:col end)))
+            (>= (.charCodeAt (:col start)) (.charCodeAt (:col cell)) (.charCodeAt (:col end))))))
   (or (= cell-ref range-str) false))) ; or coerces to false if nil
 
 ;; Returns true if row number is contained in range string
@@ -244,7 +253,9 @@
           end-cell (matches 2)
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)]
-      (<= (:row start) row (:row end)))))
+      (or
+       (<= (:row start) row (:row end)) ; for normal cell range: low to high
+       (>= (:row start) row (:row end)))))) ; handles case where cell range goes from high to low
 
 ;; Returns true if col number is contained in range string
 (defn col-in-range? [^number col ^string range-str]
@@ -258,4 +269,6 @@
           end-cell (matches 2)
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)]
-      (<= (:col start) col-char (:col end)))))
+      (or
+       (<= (:col start) col-char (:col end)) ; for normal cell range: low to high
+       (>= (:col start) col-char (:col end)))))) ; handles case where cell range goes from high to low
