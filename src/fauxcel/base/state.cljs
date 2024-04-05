@@ -9,3 +9,4 @@
 (def sel-col-offset (atom 0))
 (def edit-mode (atom false))
 (def current-cell-sheet (r/atom :cellsheet1))
+(def current-rc (r/atom {}))

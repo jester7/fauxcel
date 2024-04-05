@@ -4,7 +4,7 @@
    [reagent.ratom]
    [fauxcel.base.state :as state :refer [cells-map current-selection
                                          current-formula edit-mode
-                                         sel-col-offset sel-row-offset]]
+                                         sel-col-offset sel-row-offset current-rc]]
    [fauxcel.util.dom :as dom :refer [querySelector]]
    [fauxcel.base.constants :as c]
    [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
@@ -125,6 +125,7 @@
          data (cell-data-for (:row rc) (:col rc))
          formula (:formula data) ;(or (:formula data) (:value data))
          value (:value data)]
+     (reset! current-rc rc)
      (if formula
        (reset! current-formula formula)
        (reset! current-formula value))
