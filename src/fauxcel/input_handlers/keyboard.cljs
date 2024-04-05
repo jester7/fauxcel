@@ -3,7 +3,7 @@
    [reagent.ratom]
    [fauxcel.util.spreadsheet :as spreadsheet-util :refer [row-col-add]]
    [fauxcel.base.state :as state :refer [cells-map edit-mode
-                                         sel-row-offset sel-col-offset]]
+                                         sel-row-offset sel-col-offset current-rc]]
    [fauxcel.util.dom :as dom :refer [querySelector]]
    [fauxcel.base.constants :as c]
    [fauxcel.base.utility :as base-util :refer
@@ -48,7 +48,7 @@
       (scroll-to-cell (cell-ref rc-new) true)
       (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))
     (when (and (not @edit-mode) (> (:row rc) 1) (shift-key? key-press-info))
-      (update-multi-selection! (:row rc) (:col rc) (+ (:row rc) row-offset) (+ (:col rc) col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset)))))
 
 (defn handle-keyboard-arrow-down!
   [^js/HTMLElement curr-cell key-press-info ^number row-offset ^number col-offset]
@@ -59,7 +59,7 @@
       (scroll-to-cell (cell-ref rc-new) true)
       (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))
     (when (and (not @edit-mode) (< (:row rc) (dec c/max-rows)) (shift-key? key-press-info))
-      (update-multi-selection! (:row rc) (:col rc) (+ (:row rc) row-offset) (+ (:col rc) col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset)))))
 
 (defn handle-keyboard-arrow-left!
   [^js/HTMLElement curr-cell key-press-info ^number row-offset ^number col-offset]
@@ -70,7 +70,7 @@
       (scroll-to-cell (cell-ref rc-new) true)
       (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))
     (when (and (not @edit-mode) (> (:col rc) 1) (shift-key? key-press-info))
-      (update-multi-selection! (:row rc) (:col rc) (+ (:row rc) row-offset) (+ (:col rc) col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset)))))
 
 (defn handle-keyboard-arrow-right!
   [^js/HTMLElement curr-cell key-press-info ^number row-offset ^number col-offset]
@@ -81,7 +81,7 @@
       (scroll-to-cell (cell-ref rc-new) true)
       (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))
     (when (and (not @edit-mode) (< (:col rc) (dec c/max-cols)) (shift-key? key-press-info))
-      (update-multi-selection! (:row rc) (:col rc) (+ (:row rc) row-offset) (+ (:col rc) col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset)))))
 
 (defn handle-keyboard-tab!
   [^js/HTMLElement curr-cell key-press-info]
@@ -139,7 +139,7 @@
     @counter-atom))
 
 (defn handle-keyboard-events [^js/HTMLElement curr-cell key-press-info]
-    (debug-log-detailed "handle-keyboard-events row-offset: " @sel-row-offset " col-offset: " @sel-col-offset)
+    (debug-log-detailed "handle-keyboard-events row-offset: " @sel-row-offset " col-offset: " @sel-col-offset " curr-cell " (row-col-for-el curr-cell))
    (case (:key key-press-info)
     c/key-ArrowUp
     (handle-keyboard-arrow-up!
