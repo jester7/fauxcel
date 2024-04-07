@@ -11,7 +11,9 @@
 
 (defn cellgrid []
   [:div.cellgrid.wrapper {:id cells-parent-id
-                          :on-key-down keyboard-navigation}
+                          :on-key-down keyboard-navigation
+                          :on-click mouse/click
+                          :on-double-click mouse/double-click}
    (doall (for [row (range 0 max-rows)]
             [:div.row.wrapper {:key (str "row" row)}
              [:span.row-label {:key (str "row-label" row) :class
@@ -34,8 +36,6 @@
                                         "")
                                       (get-format-style cell-ref))
                           :on-change
-                          #(base-util/changed! (.-target %1))
-                          :on-click mouse/click
-                          :on-double-click mouse/double-click
+                          #(base-util/changed! (.-target %1))                          
                           :on-blur
                           #(base-util/handle-cell-blur (.-target %1) parser/parse-formula)}]))))]))])
