@@ -5,10 +5,10 @@
 
 ;;; Various DOM utility functions
 
-(defn querySelector [selector]
+(defn query-selector [selector]
   (js/document.querySelector selector))
 
-(defn querySelectorAll [selector]
+(defn query-selector-all [selector]
   (array-seq (js/document.querySelectorAll selector)))
 
 (defn el-by-id [el-id]
@@ -79,7 +79,7 @@
   (post-animation-fn))
 
 (defn canvas-init [canvas ctx]
-  (reset! canvas (querySelector "#circles-canvas"))
+  (reset! canvas (query-selector "#circles-canvas"))
   (set! (.-width @canvas) (.-offsetWidth @canvas))
   (set! (.-height @canvas) (.-offsetHeight @canvas))
   (reset! ctx (.getContext @canvas "2d")))

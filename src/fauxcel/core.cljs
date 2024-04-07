@@ -25,5 +25,5 @@
   (d/render [home-page] (.getElementById js/document "app")))
 
 (defn ^:export init! []
-  (r/after-render #(dom/draggable (dom/querySelector "#clippy") (dom/querySelector "html")))
+  (r/after-render #(dom/draggable (dom/query-selector "#clippy") (dom/query-selector "html")))
   (mount-root))

@@ -5,7 +5,7 @@
    [fauxcel.base.state :as state :refer [cells-map current-selection
                                          current-formula edit-mode
                                          sel-col-offset sel-row-offset current-rc]]
-   [fauxcel.util.dom :as dom :refer [querySelector]]
+   [fauxcel.util.dom :as dom :refer [query-selector query-selector-all]]
    [fauxcel.base.constants :as c]
    [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
@@ -24,7 +24,10 @@
    (str (num-to-char col) row)))
 
 (defn el-by-cell-ref [cell-ref]
-  (querySelector (str "#" cell-ref)))
+  (query-selector (str "#" cell-ref)))
+
+(defn el-by-row-col [rc]
+  (el-by-cell-ref (cell-ref (:row rc) (:col rc))))
 
 (defn changed! [^js/HTMLElement cell-el]
   (set! (.-changed (.-dataset cell-el)) true))
@@ -53,7 +56,7 @@
   ([cell-ref] (scroll-to-cell cell-ref false true)) ; default just scroll, no range check, smooth yes
   ([cell-ref check-if-out-of-range?] (scroll-to-cell cell-ref check-if-out-of-range? true))
   ([cell-ref check-if-out-of-range? smooth-scroll?]
-   (let [parent-el (querySelector c/cells-parent-id)
+   (let [parent-el (query-selector c/cells-parent-id)
          child-el (el-by-cell-ref cell-ref)
          child-bounding-rect (-> child-el .getBoundingClientRect)
          parent-bounding-rect (-> parent-el .getBoundingClientRect)
@@ -67,7 +70,10 @@
 
 
 (defn selection-cell-ref []
-  (querySelector (str c/cells-parent-id " input.selected")))
+  (query-selector (str c/cells-parent-id " input.selected")))
+
+(defn selection-last-cell-ref []
+  (last (query-selector-all (str c/cells-parent-id " input.selected"))))
 
 (defn row-col-for-el [^js/HTMLElement el]
   {:row (js/parseInt (-> el .-dataset .-row))
