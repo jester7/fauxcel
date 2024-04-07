@@ -32,4 +32,7 @@
 
 (def ^:const default-cell-sheet (first default-cell-sheets))
 
-(def ^:const cells-parent-id "#app")
+(def ^:const app-parent-id "#app")
+(def ^:const cells-parent-id "cellgrid")
+(def ^:const cells-parent-selector (str "#" cells-parent-id))
+

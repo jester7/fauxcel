@@ -56,7 +56,7 @@
   ([cell-ref] (scroll-to-cell cell-ref false true)) ; default just scroll, no range check, smooth yes
   ([cell-ref check-if-out-of-range?] (scroll-to-cell cell-ref check-if-out-of-range? true))
   ([cell-ref check-if-out-of-range? smooth-scroll?]
-   (let [parent-el (query-selector c/cells-parent-id)
+   (let [parent-el (query-selector c/app-parent-id)
          child-el (el-by-cell-ref cell-ref)
          child-bounding-rect (-> child-el .getBoundingClientRect)
          parent-bounding-rect (-> parent-el .getBoundingClientRect)
@@ -70,10 +70,10 @@
 
 
 (defn selection-cell-ref []
-  (query-selector (str c/cells-parent-id " input.selected")))
+  (query-selector (str c/cells-parent-selector " input.selected")))
 
 (defn selection-last-cell-ref []
-  (last (query-selector-all (str c/cells-parent-id " input.selected"))))
+  (last (query-selector-all (str c/cells-parent-selector " input.selected"))))
 
 (defn row-col-for-el [^js/HTMLElement el]
   {:row (js/parseInt (-> el .-dataset .-row))

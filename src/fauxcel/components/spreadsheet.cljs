@@ -1,7 +1,7 @@
 (ns fauxcel.components.spreadsheet
   (:require
    [fauxcel.base.state :as state :refer [cells-map edit-mode current-selection]]
-   [fauxcel.base.constants :as constants :refer [max-cols max-rows]]
+   [fauxcel.base.constants :as constants :refer [cells-parent-id max-cols max-rows]]
    [fauxcel.base.parser :as parser]
    [fauxcel.input-handlers.keyboard :as keyboard :refer [keyboard-navigation]]
    [fauxcel.input-handlers.mouse :as mouse]
@@ -10,7 +10,8 @@
                                                row-in-range? col-in-range?]]))
 
 (defn cellgrid []
-  [:div.cellgrid.wrapper {:on-key-down keyboard-navigation}
+  [:div.cellgrid.wrapper {:id cells-parent-id
+                          :on-key-down keyboard-navigation}
    (doall (for [row (range 0 max-rows)]
             [:div.row.wrapper {:key (str "row" row)}
              [:span.row-label {:key (str "row-label" row) :class
