@@ -21,11 +21,11 @@
   (or (:ctrl? key-press-info)
       (:alt? key-press-info)))
 
-(defn not-modifier-key? [key-press-info]
-  (not (has-modifier-key? key-press-info)))
+(def not-modifier-key?
+  (complement has-modifier-key?))
 
-(defn not-modifier-key-except-shift? [key-press-info]
-  (not (has-modifier-key-except-shift? key-press-info)))
+(def not-modifier-key-except-shift?
+  (complement has-modifier-key-except-shift?))
 
 (defn shift-key? [key-press-info]
   (:shift? key-press-info))
@@ -36,8 +36,8 @@
 (defn alt-key? [key-press-info]
   (:alt? key-press-info))
 
-(defn not-shift-key? [key-press-info]
-  (not (shift-key? key-press-info)))
+(def not-shift-key?
+  (complement shift-key?))
 
 (defn handle-keyboard-arrow-up!
   [^js/HTMLElement curr-cell key-press-info ^number row-offset ^number col-offset]

@@ -204,8 +204,8 @@
      (nil? (:value data))
      (= (:value data) ""))))
 
-(defn not-empty-cell? [cell-ref]
-  (not (empty-cell? cell-ref)))
+(def not-empty-cell?
+  (complement empty-cell?))
 
 ;; Returns true if all cells in the range are empty
 (defn empty-cell-range? [^string cell-refs]
