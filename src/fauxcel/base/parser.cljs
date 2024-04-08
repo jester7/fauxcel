@@ -85,9 +85,6 @@
         expanded-refs (s/replace expression-str
                                  cell-ref-re
                                  #(str (s/join "," (expand-cell-range (%1 0)))))]
-    ;(println "expression-str: " expression-str)
-    ;(println "expanded-refs: " expanded-refs)
-    ;(println ">>> tokenize-re: " (re-seq tokenize-re (strip-whitespace expanded-refs)))
     (re-seq tokenize-re (s/upper-case (strip-whitespace expanded-refs)))))
 
 ;;; Scans tokens for minus signs and determines if the minus sign should
@@ -96,7 +93,6 @@
 ;;; with parentheses. This effectively makes unary minus the highest priority
 ;;; operator (same as Excel, Numbers and Google Sheets).
 (defn swap-unary-minus [infix-tokens]
-  (debug-log-detailed "(swap-unary-minus) infix-tokens arg: " infix-tokens)
   (loop [original-tokens (into [] infix-tokens)
          prev-token nil ; nil at start of loop
          prev-token-unary? false ; false at start of loop
@@ -158,7 +154,6 @@
 
 ;;; Needed to handle parentheses swapping for expression reversal
 (defn swap-parentheses [expression] ; turns "(" into ")" and vice versa
-  (debug-log-detailed "swap-parentheses expression arg: " expression)
   (let [new-expression (atom [])]
     (dotimes [i (count expression)]
       (let [token (nth expression i)]
@@ -166,7 +161,6 @@
           (= token left-p) (swap! new-expression assoc i right-p)
           (= token right-p) (swap! new-expression assoc i left-p)
           :else (swap! new-expression assoc i token))))
-    (debug-log-detailed "swap-parentheses returning new-expression: " @new-expression)
     @new-expression))
 
 ;;; Pops the operator stack while the predicate function evaluates to true and

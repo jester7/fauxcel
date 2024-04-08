@@ -5,7 +5,7 @@
    [fauxcel.base.state :as state :refer [cells-map current-selection
                                          current-formula edit-mode
                                          sel-col-offset sel-row-offset current-rc]]
-   [fauxcel.util.dom :as dom :refer [query-selector query-selector-all]]
+   [fauxcel.util.dom :as dom :refer [query-selector el-by-id query-selector-all]]
    [fauxcel.base.constants :as c]
    [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
@@ -69,10 +69,10 @@
        (.scrollTo parent-el (clj->js scroll-to-info)))))) ; (.scrollIntoView child-el (clj->js {:behavior (if smooth-scroll? "smooth" "auto")}))
 
 
-(defn selection-cell-ref []
+(defn selection-cell-ref [] ;; TODO rename to selection-cell-el since it returns the element
   (query-selector (str c/cells-parent-selector " input.selected")))
 
-(defn selection-last-cell-ref []
+(defn selection-last-cell-ref [] ;; TODO rename to selection-last-cell-el
   (last (query-selector-all (str c/cells-parent-selector " input.selected"))))
 
 (defn row-col-for-el [^js/HTMLElement el]
@@ -85,9 +85,12 @@
 (defn col-for-el [^js/HTMLElement el]
   (:col (row-col-for-el el)))
 
-(defn row-col-for-cell-ref [cell-ref]
-  (let [matches (re-matches c/cell-ref-re cell-ref)]
-    {:row (js/parseInt (matches 2)) :col (matches 1)}))
+(defn row-col-for-cell-ref
+  ([cell-ref] (row-col-for-cell-ref cell-ref false))
+  ([cell-ref col-as-letter?] 
+  (let [matches (re-matches c/cell-ref-re cell-ref)
+        col (if col-as-letter? (matches 1) (col-for-el (el-by-id (matches 0))))]
+    {:row (js/parseInt (matches 2)) :col col})))
 
 (defn col-label [^number col-num ^boolean selected?]
   [:span.col-label {:key (str "col-label-" (num-to-char col-num))
@@ -186,18 +189,17 @@
     false))
 
 (defn expand-cell-range [^string range-str]
-  ;(debug-log "expand-cell-range was passed range-str: " range-str)
   (let [range-str-upper (s/upper-case range-str)]
     (cond
       (cell-range? range-str)
       (let [matches (re-matches c/cell-range-start-end-re range-str-upper)
             start-cell (matches 1)
             end-cell (matches 2)
-            start (row-col-for-cell-ref start-cell)
-            end (row-col-for-cell-ref end-cell)]
-        (flatten (for [col (range (.charCodeAt (:col start)) (inc (.charCodeAt (:col end))))]
+            start (row-col-for-cell-ref start-cell )
+            end (row-col-for-cell-ref end-cell )]
+        (flatten (for [col (range (:col start) (inc (:col end)))]
                    (for [row (range (:row start) (inc (:row end)))]
-                     (str (char col) row)))))
+                     (str (char (+ col 64)) row)))))
       (cell-ref? range-str)
       (list range-str) ; return single cell
       :else
@@ -228,7 +230,7 @@
         start (row-col-for-cell-ref start-cell)
         end (row-col-for-cell-ref end-cell)]
     (if (and (<= (:row start) (:row end))
-             (<= (.charCodeAt (:col start)) (.charCodeAt (:col end))))
+             (<= (:col start) (:col end)))
       range-str
       (str end-cell ":" start-cell))))
 
@@ -245,8 +247,8 @@
       (and (or (<= (:row start) (:row cell) (:row end))
                 (>= (:row start) (:row cell) (:row end)))
            (or
-            (<= (.charCodeAt (:col start)) (.charCodeAt (:col cell)) (.charCodeAt (:col end)))
-            (>= (.charCodeAt (:col start)) (.charCodeAt (:col cell)) (.charCodeAt (:col end))))))
+            (<=  (:col start) (:col cell) (:col end))
+            (>= (:col start) (:col cell) (:col end)))))
   (or (= cell-ref range-str) false))) ; or coerces to false if nil
 
 ;; Returns true if row number is contained in range string
