@@ -281,3 +281,6 @@
       (or
        (<= (:col start) col-char (:col end)) ; for normal cell range: low to high
        (>= (:col start) col-char (:col end)))))) ; handles case where cell range goes from high to low
+
+(defn curr-selection-is-multi? ^boolean []
+  (cell-range? @current-selection))

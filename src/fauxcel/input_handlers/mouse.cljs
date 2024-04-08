@@ -4,7 +4,7 @@
                                          sel-col-offset sel-row-offset current-rc]]
    [fauxcel.base.utility :as base-util :refer [update-selection! update-multi-selection!
                                                row-col-for-cell-ref selection-cell-ref recursive-deref
-                                               cell-ref-for-input row-col-for-el]]
+                                               cell-ref-for-input row-col-for-el curr-selection-is-multi?]]
    [fauxcel.input-handlers.keyboard :as keyboard :refer [get-key-press-info shift-key? not-shift-key?]]
    [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
@@ -32,9 +32,11 @@
           (set! (-> (selection-cell-ref) .-readOnly) true)))
       (update-selection! (.-target e)))
     (when (shift-key? key)
+      ;(if (curr-selection-is-multi?)
+
+       ; )
       (reset-selection-offset! e)
-      ;; example of how to use update-multi-selection!
-      ;; (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset))
+      
       (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) @sel-row-offset) (+ (:col @current-rc) @sel-col-offset)))))
 
 (defn double-click
