@@ -6,6 +6,7 @@
                                                row-col-for-cell-ref selection-cell-ref recursive-deref
                                                cell-ref-for-input row-col-for-el curr-selection-is-multi?]]
    [fauxcel.input-handlers.keyboard :as keyboard :refer [get-key-press-info shift-key? not-shift-key?]]
+   [fauxcel.util.dom :as dom :refer [prevent-default]]
    [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
 (defn reset-selection-offset!
@@ -35,9 +36,12 @@
       ;(if (curr-selection-is-multi?)
 
        ; )
+      (prevent-default e)
       (reset-selection-offset! e)
       
-      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) @sel-row-offset) (+ (:col @current-rc) @sel-col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc)
+                               (+ (:row @current-rc) @sel-row-offset)
+                               (+ (:col @current-rc) @sel-col-offset)))))
 
 (defn double-click
   "Handles the double click event for the spreadsheet cell grid"

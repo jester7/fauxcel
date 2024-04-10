@@ -150,7 +150,7 @@
 
     ; must be a number then
     :else
-    (m/eval-number token)))
+    (do (println "token" token)(m/eval-number token))))
 
 ;;; Needed to handle parentheses swapping for expression reversal
 (defn swap-parentheses [expression] ; turns "(" into ")" and vice versa
@@ -200,6 +200,7 @@
         op-stack (atom ())
         arity-stack (atom ())
         out-stack (atom ())]
+        (debug-log "...>>>reversed-expr" reversed-expr)
     (dotimes [i num-items]
 
       (let [token (reversed-expr (- num-items i 1))]
@@ -247,7 +248,11 @@
     ;; Once all tokens have been processed, pop and eval the stacks while op stack is not empty.
     (pop-stack-while! #(seq @op-stack) op-stack out-stack arity-stack)
     ;; Assuming the expression was a valid one, the last item is the final result.
-    (eval-token (peek @out-stack)))) ; handle edge case where formula is a single cell reference
+    (let [peek-result (peek @out-stack)]
+       (if (not (nil? peek-result))
+         (eval-token peek-result)
+         "#ERROR")
+       ))) ; handle edge case where formula is a single cell reference
 
 (defn infix-expression-prepare [infix-expression]
   (let [reversed-expr (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression)))]

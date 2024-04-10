@@ -177,19 +177,42 @@
 
 (defn cell-ref? ^boolean [val] ; fix regex and move to constants
   (cond
+    (nil? val) false
     (= "" val) false
     (number? val) false
     (coll? val) false
     :else
-    (not (nil? (re-seq #"^[A-Z]{1,2}[0-9]{1,4}$" val)))))
+    (do
+      (debug-log-detailed ">> cell-ref? val: " val)
+      (not (nil? (re-seq #"^[A-Z]{1,2}[0-9]{1,4}$" val))))))
 
 (defn cell-range? ^boolean [token]
   (if (string? token)
     (not (nil? (re-seq c/cell-range-check-re token)))
     false))
 
-(defn expand-cell-range [^string range-str]
-  (let [range-str-upper (s/upper-case range-str)]
+;; Flips cell range to be in order from top left to bottom right
+(defn flip-range-if-unordered
+  "Flips cell range if it is unordered, i.e. if start cell
+  is greater than end cell."
+  ^string [^string range-str]
+  (let [matches (re-matches c/cell-range-start-end-re range-str)]
+    (if (nil? matches)
+      range-str ; return original value if not a cell range - likely a single cell
+      (let [start-cell (matches 1)
+            end-cell (matches 2)
+            start (row-col-for-cell-ref start-cell)
+            end (row-col-for-cell-ref end-cell)]
+        (if (and (<= (:row start) (:row end))
+                 (<= (:col start) (:col end)))
+          range-str
+          (str end-cell ":" start-cell))))))
+
+(defn expand-cell-range
+  "Expands cell range string to list of cell refs."
+  [^string range-str]
+  (let [range-str-upper (flip-range-if-unordered
+                         (s/upper-case range-str))]
     (cond
       (cell-range? range-str)
       (let [matches (re-matches c/cell-range-start-end-re range-str-upper)
@@ -205,7 +228,7 @@
       :else
       nil)))
 
-(defn empty-cell? [cell-ref]
+(defn empty-cell? ^boolean [cell-ref]
   (let [data (cell-data-for cell-ref)]
     (or
      (nil? data)
@@ -216,23 +239,13 @@
   (complement empty-cell?))
 
 ;; Returns true if all cells in the range are empty
-(defn empty-cell-range? [^string cell-refs]
+(defn empty-cell-range?
+  ^boolean [^string cell-refs]
   (not-any? not-empty-cell? (expand-cell-range cell-refs)))
 
-(defn not-empty-cell-range? [^string cell-refs]
-  (not (empty-cell-range? cell-refs)))
+(def not-empty-cell-range?
+  (complement empty-cell-range?))
 
-;; Flips cell range to be in order from top left to bottom right
-(defn flip-range-if-unordered [^string range-str]
-  (let [matches (re-matches c/cell-range-start-end-re range-str)
-        start-cell (matches 1)
-        end-cell (matches 2)
-        start (row-col-for-cell-ref start-cell)
-        end (row-col-for-cell-ref end-cell)]
-    (if (and (<= (:row start) (:row end))
-             (<= (:col start) (:col end)))
-      range-str
-      (str end-cell ":" start-cell))))
 
 ;; Returns true if cell is contained in the range
 (defn cell-in-range? [^string cell-ref ^string range-str]
