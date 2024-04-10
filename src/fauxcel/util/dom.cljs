@@ -81,6 +81,11 @@
    (input-enable el)
    (when set-class? (remove-class el "disabled"))))
 
+(defn prevent-default
+  "Prevent the default action of an event"
+  [^js/Event e]
+  (.preventDefault e))
+
 (defn touch-device?
   "Uses browser feature detection to determine if the device is a touch device"
   ^boolean []
