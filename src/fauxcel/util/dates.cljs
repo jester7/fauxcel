@@ -12,6 +12,7 @@
 (defn date? [some-date]
   (cond
     (number? some-date) false
+    (not (string? some-date)) false
     :else
     (re-seq is-date-re some-date)))
 

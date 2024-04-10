@@ -37,13 +37,16 @@
 (defn sum [& nums]
   (reduce + (map #(eval-number %1 true) nums)))
 
-;; ---------------------------------------------
-;; Returns the average of a list of numbers
 (defn average
-  ([nums] ; invoked when single arg is already a seq 
-   (apply average nums))
-  ([& nums] ; variadic version
-   (/ (reduce + nums) (count nums))))
+  "Returns the average of one or more numbers."
+  ([] nil)
+  (^number [nums]
+   (if (seq? nums)
+     (/ (reduce + nums) (count nums))
+     (if (numeric? nums) (eval-number nums) nil)))
+  (^number [x & more]
+   (let [nums (cons x more)]
+     (/ (reduce + nums) (count nums)))))
 
 ;; ---------------------------------------------
 ;; Returns the standard deviation of a list of numbers
