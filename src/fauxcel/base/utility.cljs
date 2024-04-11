@@ -5,7 +5,8 @@
    [fauxcel.base.state :as state :refer [cells-map current-selection
                                          current-formula edit-mode
                                          sel-col-offset sel-row-offset current-rc]]
-   [fauxcel.util.dom :as dom :refer [query-selector el-by-id query-selector-all]]
+   [fauxcel.util.dom :as dom :refer [query-selector el-by-id id-for-el
+                                     contains-class? query-selector-all]]
    [fauxcel.base.constants :as c]
    [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
@@ -92,13 +93,25 @@
         col (if col-as-letter? (matches 1) (col-for-el (el-by-id (matches 0))))]
     {:row (js/parseInt (matches 2)) :col col})))
 
-(defn col-label [^number col-num ^boolean selected?]
+(defn col-label
+  [^number col-num ^boolean selected?]
   [:span.col-label {:key (str "col-label-" (num-to-char col-num))
+                    :id (str (num-to-char col-num) "0")
                     :class (if selected? "selected" "")}
    (num-to-char col-num)])
 
-(defn cell-ref-for-input [^js/HTMLElement input-el]
-  (cell-ref (js/parseInt (-> input-el .-dataset .-row)) (js/parseInt (-> input-el .-dataset .-col))))
+(defn col-label? ^boolean
+  [^js/HTMLElement el]
+  (contains-class? el "col-label"))
+
+(defn row-label? ^boolean
+  [^js/HTMLElement el]
+  (contains-class? el "row-label"))
+
+(defn cell-ref-for-input
+  [^js/HTMLElement input-el]
+  (id-for-el input-el))
+;(cell-ref (js/parseInt (-> input-el .-dataset .-row)) (js/parseInt (-> input-el .-dataset .-col))))
 
 (defn cell-data-for
   ([cell-ref] (@cells-map cell-ref))
@@ -183,7 +196,6 @@
     (coll? val) false
     :else
     (do
-      (debug-log-detailed ">> cell-ref? val: " val)
       (not (nil? (re-seq #"^[A-Z]{1,2}[0-9]{1,4}$" val))))))
 
 (defn cell-range? ^boolean [token]

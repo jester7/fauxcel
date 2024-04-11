@@ -17,7 +17,8 @@
    (doall (for [row (range 0 max-rows)]
             [:div.row.wrapper {:key (str "row" row)}
              [:span.row-label {:key (str "row-label" row) :class
-                               (if (row-in-range? row @current-selection) "selected" "")} row]
+                               (if (row-in-range? row @current-selection) "selected" "")
+                               :id (str "_" row)} row]
              (doall (for [col (range 1 max-cols)]
                       (let [cell-ref (cell-ref row col)]
                        (if (= row 0)
