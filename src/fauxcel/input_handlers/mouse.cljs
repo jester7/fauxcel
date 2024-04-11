@@ -3,6 +3,7 @@
    [fauxcel.base.state :as state :refer [cells-map edit-mode current-selection
                                          sel-col-offset sel-row-offset current-rc]]
    [fauxcel.base.utility :as base-util :refer [update-selection! update-multi-selection!
+                                               row-label? col-label?
                                                row-col-for-cell-ref selection-cell-ref recursive-deref
                                                cell-ref-for-input row-col-for-el curr-selection-is-multi?]]
    [fauxcel.input-handlers.keyboard :as keyboard :refer [get-key-press-info shift-key? not-shift-key?]]
@@ -23,15 +24,21 @@
 (defn click
   "Handles the click event for the spreadsheet cell grid"
   [e]
-  (let [key (get-key-press-info e)]
-    (when (not-shift-key? key)
-      (when (and @edit-mode (not= @current-selection (cell-ref-for-input (.-target e))))
+  (let [key (get-key-press-info e)
+        clicked-el (.-target e)
+        row-label? (row-label? clicked-el)
+        col-label? (col-label? clicked-el)
+        cell? (and (not row-label?) (not col-label?))
+        clicked-cell-ref (cell-ref-for-input clicked-el)]
+    (when cell?
+      (when (not-shift-key? key) ;(not (nil? clicked-cell-ref))
+      (when (and @edit-mode (not= @current-selection clicked-cell-ref))
         (when (not (nil? (selection-cell-ref)))
           (reset! edit-mode false)
           (set! (-> (selection-cell-ref) .-value)
                 (recursive-deref (:value (@cells-map @current-selection))))
-          (set! (-> (selection-cell-ref) .-readOnly) true)))
-      (update-selection! (.-target e)))
+          (set! (-> (selection-cell-ref) .-readOnly) true))) 
+      (update-selection! clicked-el))
     (when (shift-key? key)
       ;(if (curr-selection-is-multi?)
 
@@ -41,7 +48,11 @@
       
       (update-multi-selection! (:row @current-rc) (:col @current-rc)
                                (+ (:row @current-rc) @sel-row-offset)
-                               (+ (:col @current-rc) @sel-col-offset)))))
+                               (+ (:col @current-rc) @sel-col-offset))))
+    (when (or row-label? col-label?)
+      ;; set whole row or column as selected
+      false ; TODO temporary return value
+      )))
 
 (defn double-click
   "Handles the double click event for the spreadsheet cell grid"
