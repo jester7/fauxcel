@@ -20,6 +20,14 @@
   ^js/HTMLElement [^string el-id]
   (js/document.getElementById el-id))
 
+(defn id-for-el
+  "Get the id of an element"
+  ^string [^js/HTMLElement el]
+  (let [id (.-id el)]
+    (if (s/blank? id)
+      nil
+      id)))
+
 (defn style-by-id
   "Get the style object of an element by its id"
   [^string el-id]
