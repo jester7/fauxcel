@@ -2,12 +2,13 @@
   (:require
    [clojure.string :as s]
    [reagent.ratom]
-   [fauxcel.base.state :as state :refer [cells-map current-selection current-formula edit-mode]]
-   [fauxcel.util.dom :as dom :refer [querySelector]]
+   [fauxcel.base.state :as state :refer [cells-map current-selection
+                                         current-formula edit-mode
+                                         sel-col-offset sel-row-offset current-rc]]
+   [fauxcel.util.dom :as dom :refer [query-selector el-by-id id-for-el
+                                     contains-class? query-selector-all]]
    [fauxcel.base.constants :as c]
-   [fauxcel.util.debug :as debug :refer [debug-log]]))
-
-(def ^:const cells-parent-selector "#app")
+   [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
 (defn str-empty? [^string str]
   (or (nil? str) (= "" str)))
@@ -24,7 +25,10 @@
    (str (num-to-char col) row)))
 
 (defn el-by-cell-ref [cell-ref]
-  (querySelector (str "#" cell-ref)))
+  (query-selector (str "#" cell-ref)))
+
+(defn el-by-row-col [rc]
+  (el-by-cell-ref (cell-ref (:row rc) (:col rc))))
 
 (defn changed! [^js/HTMLElement cell-el]
   (set! (.-changed (.-dataset cell-el)) true))
@@ -53,7 +57,7 @@
   ([cell-ref] (scroll-to-cell cell-ref false true)) ; default just scroll, no range check, smooth yes
   ([cell-ref check-if-out-of-range?] (scroll-to-cell cell-ref check-if-out-of-range? true))
   ([cell-ref check-if-out-of-range? smooth-scroll?]
-   (let [parent-el (querySelector cells-parent-selector)
+   (let [parent-el (query-selector c/app-parent-id)
          child-el (el-by-cell-ref cell-ref)
          child-bounding-rect (-> child-el .getBoundingClientRect)
          parent-bounding-rect (-> parent-el .getBoundingClientRect)
@@ -66,24 +70,48 @@
        (.scrollTo parent-el (clj->js scroll-to-info)))))) ; (.scrollIntoView child-el (clj->js {:behavior (if smooth-scroll? "smooth" "auto")}))
 
 
-(defn selection-cell-ref []
-  (querySelector (str cells-parent-selector " input.selected")))
+(defn selection-cell-ref [] ;; TODO rename to selection-cell-el since it returns the element
+  (query-selector (str c/cells-parent-selector " input.selected")))
+
+(defn selection-last-cell-ref [] ;; TODO rename to selection-last-cell-el
+  (last (query-selector-all (str c/cells-parent-selector " input.selected"))))
 
 (defn row-col-for-el [^js/HTMLElement el]
   {:row (js/parseInt (-> el .-dataset .-row))
    :col (js/parseInt (-> el .-dataset .-col))})
 
-(defn row-col-for-cell-ref [cell-ref]
-  (let [matches (re-matches c/cell-ref-re cell-ref)]
-    {:row (js/parseInt (matches 2)) :col (matches 1)}))
+(defn row-for-el [^js/HTMLElement el]
+  (:row (row-col-for-el el)))
 
-(defn col-label [^number col-num ^boolean selected?]
+(defn col-for-el [^js/HTMLElement el]
+  (:col (row-col-for-el el)))
+
+(defn row-col-for-cell-ref
+  ([cell-ref] (row-col-for-cell-ref cell-ref false))
+  ([cell-ref col-as-letter?] 
+  (let [matches (re-matches c/cell-ref-re cell-ref)
+        col (if col-as-letter? (matches 1) (col-for-el (el-by-id (matches 0))))]
+    {:row (js/parseInt (matches 2)) :col col})))
+
+(defn col-label
+  [^number col-num ^boolean selected?]
   [:span.col-label {:key (str "col-label-" (num-to-char col-num))
+                    :id (str (num-to-char col-num) "0")
                     :class (if selected? "selected" "")}
    (num-to-char col-num)])
 
-(defn cell-ref-for-input [^js/HTMLElement input-el]
-  (cell-ref (js/parseInt (-> input-el .-dataset .-row)) (js/parseInt (-> input-el .-dataset .-col))))
+(defn col-label? ^boolean
+  [^js/HTMLElement el]
+  (contains-class? el "col-label"))
+
+(defn row-label? ^boolean
+  [^js/HTMLElement el]
+  (contains-class? el "row-label"))
+
+(defn cell-ref-for-input
+  [^js/HTMLElement input-el]
+  (id-for-el input-el))
+;(cell-ref (js/parseInt (-> input-el .-dataset .-row)) (js/parseInt (-> input-el .-dataset .-col))))
 
 (defn cell-data-for
   ([cell-ref] (@cells-map cell-ref))
@@ -110,15 +138,16 @@
 (defn update-selection!
   ([el] (update-selection! el false))
   ([el get-formula?]
-   (when (not= @current-selection "")
-     (dom/remove-class (querySelector (str "#" @current-selection)) "selected"))
-   (dom/add-class-name el "selected")
+   ;(dom/add-class-name el "selected") ; not needed, handled by setting current selection
    (reset! current-selection (cell-ref-for-input el))
+   (reset! sel-row-offset 0)
+   (reset! sel-col-offset 0)
    (.focus el)
    (let [rc (row-col-for-el el)
          data (cell-data-for (:row rc) (:col rc))
          formula (:formula data) ;(or (:formula data) (:value data))
          value (:value data)]
+     (reset! current-rc rc)
      (if formula
        (reset! current-formula formula)
        (reset! current-formula value))
@@ -127,10 +156,10 @@
 
 (defn update-multi-selection!
   [^number start-row ^number start-col ^number end-row ^number end-col]
-  (println "update-multi-selection! start-row: " start-row " start-col: " start-col " end-row: " end-row " end-col: " end-col)
+  (debug-log-detailed "update-multi-selection! start-row: " start-row " start-col: " start-col " end-row: " end-row " end-col: " end-col)
   (let [start (cell-ref start-row start-col)
         end (cell-ref end-row end-col)
-        selection-range (str start ":" end)]
+        selection-range (if (not= start end) (str start ":" end) start)]
     (reset! current-selection selection-range)))
 
 (defn get-cell-row [^js/HTMLElement cell-el]
@@ -161,63 +190,74 @@
 
 (defn cell-ref? ^boolean [val] ; fix regex and move to constants
   (cond
+    (nil? val) false
     (= "" val) false
     (number? val) false
     (coll? val) false
     :else
-    (not (nil? (re-seq #"^[A-Z]{1,2}[0-9]{1,4}$" val)))))
+    (do
+      (not (nil? (re-seq #"^[A-Z]{1,2}[0-9]{1,4}$" val))))))
 
 (defn cell-range? ^boolean [token]
   (if (string? token)
     (not (nil? (re-seq c/cell-range-check-re token)))
     false))
 
-(defn expand-cell-range [^string range-str]
-  ;(debug-log "expand-cell-range was passed range-str: " range-str)
-  (let [range-str-upper (s/upper-case range-str)]
+;; Flips cell range to be in order from top left to bottom right
+(defn flip-range-if-unordered
+  "Flips cell range if it is unordered, i.e. if start cell
+  is greater than end cell."
+  ^string [^string range-str]
+  (let [matches (re-matches c/cell-range-start-end-re range-str)]
+    (if (nil? matches)
+      range-str ; return original value if not a cell range - likely a single cell
+      (let [start-cell (matches 1)
+            end-cell (matches 2)
+            start (row-col-for-cell-ref start-cell)
+            end (row-col-for-cell-ref end-cell)]
+        (if (and (<= (:row start) (:row end))
+                 (<= (:col start) (:col end)))
+          range-str
+          (str end-cell ":" start-cell))))))
+
+(defn expand-cell-range
+  "Expands cell range string to list of cell refs."
+  [^string range-str]
+  (let [range-str-upper (flip-range-if-unordered
+                         (s/upper-case range-str))]
     (cond
       (cell-range? range-str)
       (let [matches (re-matches c/cell-range-start-end-re range-str-upper)
             start-cell (matches 1)
             end-cell (matches 2)
-            start (row-col-for-cell-ref start-cell)
-            end (row-col-for-cell-ref end-cell)]
-        (flatten (for [col (range (.charCodeAt (:col start)) (inc (.charCodeAt (:col end))))]
+            start (row-col-for-cell-ref start-cell )
+            end (row-col-for-cell-ref end-cell )]
+        (flatten (for [col (range (:col start) (inc (:col end)))]
                    (for [row (range (:row start) (inc (:row end)))]
-                     (str (char col) row)))))
+                     (str (char (+ col 64)) row)))))
       (cell-ref? range-str)
       (list range-str) ; return single cell
       :else
       nil)))
 
-(defn empty-cell? [cell-ref]
+(defn empty-cell? ^boolean [cell-ref]
   (let [data (cell-data-for cell-ref)]
     (or
      (nil? data)
      (nil? (:value data))
      (= (:value data) ""))))
 
-(defn not-empty-cell? [cell-ref]
-  (not (empty-cell? cell-ref)))
+(def not-empty-cell?
+  (complement empty-cell?))
 
 ;; Returns true if all cells in the range are empty
-(defn empty-cell-range? [^string cell-refs]
+(defn empty-cell-range?
+  ^boolean [^string cell-refs]
   (not-any? not-empty-cell? (expand-cell-range cell-refs)))
 
-(defn not-empty-cell-range? [^string cell-refs]
-  (not (empty-cell-range? cell-refs)))
+(def not-empty-cell-range?
+  (complement empty-cell-range?))
 
-;; Flips cell range to be in order from top left to bottom right
-(defn flip-range-if-unordered [^string range-str]
-  (let [matches (re-matches c/cell-range-start-end-re range-str)
-        start-cell (matches 1)
-        end-cell (matches 2)
-        start (row-col-for-cell-ref start-cell)
-        end (row-col-for-cell-ref end-cell)]
-    (if (and (<= (:row start) (:row end))
-             (<= (.charCodeAt (:col start)) (.charCodeAt (:col end))))
-      range-str
-      (str end-cell ":" start-cell))))
 
 ;; Returns true if cell is contained in the range
 (defn cell-in-range? [^string cell-ref ^string range-str]
@@ -229,8 +269,11 @@
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)
           cell (row-col-for-cell-ref cell-ref)]
-      (and (<= (:row start) (:row cell) (:row end))
-           (<= (.charCodeAt (:col start)) (.charCodeAt (:col cell)) (.charCodeAt (:col end)))))
+      (and (or (<= (:row start) (:row cell) (:row end))
+                (>= (:row start) (:row cell) (:row end)))
+           (or
+            (<=  (:col start) (:col cell) (:col end))
+            (>= (:col start) (:col cell) (:col end)))))
   (or (= cell-ref range-str) false))) ; or coerces to false if nil
 
 ;; Returns true if row number is contained in range string
@@ -244,7 +287,9 @@
           end-cell (matches 2)
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)]
-      (<= (:row start) row (:row end)))))
+      (or
+       (<= (:row start) row (:row end)) ; for normal cell range: low to high
+       (>= (:row start) row (:row end)))))) ; handles case where cell range goes from high to low
 
 ;; Returns true if col number is contained in range string
 (defn col-in-range? [^number col ^string range-str]
@@ -258,4 +303,9 @@
           end-cell (matches 2)
           start (row-col-for-cell-ref start-cell)
           end (row-col-for-cell-ref end-cell)]
-      (<= (:col start) col-char (:col end)))))
+      (or
+       (<= (:col start) col-char (:col end)) ; for normal cell range: low to high
+       (>= (:col start) col-char (:col end)))))) ; handles case where cell range goes from high to low
+
+(defn curr-selection-is-multi? ^boolean []
+  (cell-range? @current-selection))

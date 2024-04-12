@@ -2,7 +2,6 @@
   (:require
    [reagent.core :as r]
    [reagent.dom :as d]
-   [fauxcel.base.state :as state :refer [current-cell-sheet]]
    [fauxcel.components.toolbar.toolbar :refer [toolbar]]
    [fauxcel.components.spreadsheet :refer [cellgrid]]
    [fauxcel.components.tabs :refer [cell-sheet-footer]]
@@ -14,7 +13,7 @@
 (defn home-page []
   [:div.appwrapper
    [toolbar]
-   [:div#clippy]
+   [:div#lispy]
    [cellgrid]
    [cell-sheet-footer]])
 
@@ -25,5 +24,5 @@
   (d/render [home-page] (.getElementById js/document "app")))
 
 (defn ^:export init! []
-  (r/after-render #(dom/draggable (dom/querySelector "#clippy") (dom/querySelector "html")))
+  (r/after-render #(dom/draggable (dom/query-selector "#lispy") (dom/query-selector "html")))
   (mount-root))

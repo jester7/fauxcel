@@ -1,25 +1,15 @@
-(ns fauxcel.base.keyboard-handlers
+(ns fauxcel.input-handlers.keyboard
   (:require
    [reagent.ratom]
+   [fauxcel.util.spreadsheet :as spreadsheet-util :refer [row-col-add]]
    [fauxcel.base.state :as state :refer [cells-map edit-mode
-                                         sel-row-offset sel-col-offset]]
-   [fauxcel.util.dom :as dom :refer [querySelector]]
+                                         sel-row-offset sel-col-offset current-rc]]
    [fauxcel.base.constants :as c]
    [fauxcel.base.utility :as base-util :refer
     [update-selection! update-multi-selection! scroll-to-cell cell-ref
-     selection-cell-ref recursive-deref
-     row-col-for-el]]))
-
-
-(defn row-col-add [rc-map row-n col-n]
-  (let [new-row (+ (:row rc-map) row-n)
-        new-col (+ (:col rc-map) col-n)]
-    (if (or (< new-row 1)
-            (> new-row (dec c/max-rows))
-            (< new-col 1)
-            (> new-col (dec c/max-cols)))
-      rc-map ; return original if out of range
-      {:row new-row :col new-col}))) ; else return updated row/col
+     selection-cell-ref recursive-deref row-for-el col-for-el
+     row-col-for-el selection-last-cell-ref el-by-row-col]]
+   [fauxcel.util.debug :as debug :refer [debug-log-detailed]]))
 
 (defn has-modifier-key? [key-press-info]
   (or (:shift? key-press-info)
@@ -30,11 +20,11 @@
   (or (:ctrl? key-press-info)
       (:alt? key-press-info)))
 
-(defn not-modifier-key? [key-press-info]
-  (not (has-modifier-key? key-press-info)))
+(def not-modifier-key?
+  (complement has-modifier-key?))
 
-(defn not-modifier-key-except-shift? [key-press-info]
-  (not (has-modifier-key-except-shift? key-press-info)))
+(def not-modifier-key-except-shift?
+  (complement has-modifier-key-except-shift?))
 
 (defn shift-key? [key-press-info]
   (:shift? key-press-info))
@@ -45,8 +35,8 @@
 (defn alt-key? [key-press-info]
   (:alt? key-press-info))
 
-(defn not-shift-key? [key-press-info]
-  (not (shift-key? key-press-info)))
+(def not-shift-key?
+  (complement shift-key?))
 
 (defn handle-keyboard-arrow-up!
   [^js/HTMLElement curr-cell key-press-info ^number row-offset ^number col-offset]
@@ -55,9 +45,9 @@
     (when (and (not @edit-mode) (> (:row rc) 1) (not-shift-key? key-press-info))
       (set! (.-readOnly curr-cell) true)
       (scroll-to-cell (cell-ref rc-new) true)
-      (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))
+      (update-selection! (el-by-row-col rc-new)))
     (when (and (not @edit-mode) (> (:row rc) 1) (shift-key? key-press-info))
-      (update-multi-selection! (:row rc) (:col rc) (+ (:row rc) row-offset) (+ (:col rc) col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset)))))
 
 (defn handle-keyboard-arrow-down!
   [^js/HTMLElement curr-cell key-press-info ^number row-offset ^number col-offset]
@@ -66,9 +56,9 @@
     (when (and (not @edit-mode) (< (:row rc) (dec c/max-rows)) (not-shift-key? key-press-info))
       (set! (.-readOnly curr-cell) true)
       (scroll-to-cell (cell-ref rc-new) true)
-      (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))
+      (update-selection! (el-by-row-col rc-new)))
     (when (and (not @edit-mode) (< (:row rc) (dec c/max-rows)) (shift-key? key-press-info))
-      (update-multi-selection! (:row rc) (:col rc) (+ (:row rc) row-offset) (+ (:col rc) col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset)))))
 
 (defn handle-keyboard-arrow-left!
   [^js/HTMLElement curr-cell key-press-info ^number row-offset ^number col-offset]
@@ -77,9 +67,9 @@
     (when (and (not @edit-mode) (> (:col rc) 1) (not-shift-key? key-press-info))
       (set! (.-readOnly curr-cell) true)
       (scroll-to-cell (cell-ref rc-new) true)
-      (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))
+      (update-selection! (el-by-row-col rc-new)))
     (when (and (not @edit-mode) (> (:col rc) 1) (shift-key? key-press-info))
-      (update-multi-selection! (:row rc) (:col rc) (+ (:row rc) row-offset) (+ (:col rc) col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset)))))
 
 (defn handle-keyboard-arrow-right!
   [^js/HTMLElement curr-cell key-press-info ^number row-offset ^number col-offset]
@@ -88,9 +78,9 @@
     (when (and (not @edit-mode) (< (:col rc) (dec c/max-cols)) (not-shift-key? key-press-info))
       (set! (.-readOnly curr-cell) true)
       (scroll-to-cell (cell-ref rc-new) true)
-      (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))
+      (update-selection! (el-by-row-col rc-new)))
     (when (and (not @edit-mode) (< (:col rc) (dec c/max-cols)) (shift-key? key-press-info))
-      (update-multi-selection! (:row rc) (:col rc) (+ (:row rc) row-offset) (+ (:col rc) col-offset)))))
+      (update-multi-selection! (:row @current-rc) (:col @current-rc) (+ (:row @current-rc) row-offset) (+ (:col @current-rc) col-offset)))))
 
 (defn handle-keyboard-tab!
   [^js/HTMLElement curr-cell key-press-info]
@@ -100,7 +90,7 @@
     (set! (.-readOnly curr-cell) true)
     (when (< (:col rc) (dec c/max-cols))
       (scroll-to-cell (cell-ref rc-new) true)
-      (update-selection! (querySelector (str "#" (cell-ref (:row rc-new) (:col rc-new))))))))
+      (update-selection! (el-by-row-col rc-new)))))
 
 (defn handle-keyboard-enter! [^js/HTMLElement curr-cell]
   (let [rc (row-col-for-el curr-cell)]
@@ -108,11 +98,11 @@
       (do ; edit mode is false, so enter edit mode
         (reset! edit-mode true)
         (set! (.-readOnly curr-cell) false)
-        (update-selection! (querySelector (str "#" (cell-ref (:row rc) (:col rc)))) true))
+        (update-selection! (el-by-row-col rc) true))
       (do ; edit mode is true, so exit edit mode and move down a row if not at max already
         (reset! edit-mode false)
         (set! (.-readOnly curr-cell) true)
-        (update-selection! (querySelector (str "#" (cell-ref (row-col-add rc 1 0)))))))))
+        (update-selection! (el-by-row-col (row-col-add rc 1 0)))))))
 
 (defn handle-keyboard-escape! [^js/HTMLElement curr-cell]
   (when @edit-mode
@@ -131,36 +121,44 @@
 (defn handle-keyboard-any-key!
   [^js/HTMLElement curr-cell key-press-info]
   (when (and (not @edit-mode) (not (nil? (:key key-press-info))) (not-modifier-key-except-shift? key-press-info))
-    (println "handle-keyboard-any-key! :key " (:key key-press-info))
+    (debug-log-detailed "handle-keyboard-any-key! :key " (:key key-press-info))
     (set! (-> curr-cell .-readOnly) false)
     (reset! edit-mode true)
     (update-selection! curr-cell true)
     (set! (-> curr-cell .-value) "")))
 
-(defn inc-when<max [counter-atom ^number max]
-  (if (< @counter-atom max)
+(defn inc-when<max! [counter-atom ^number curr-val ^number max]
+  (if (< (+ @counter-atom curr-val) (dec max))
     (swap! counter-atom inc)
     @counter-atom))
 
-(defn dec-when>1 [counter-atom]
-  (if (> @counter-atom 1)
+(defn dec-when>1! [counter-atom  ^number curr-val]
+  (if (> (+ @counter-atom curr-val) 1)
     (swap! counter-atom dec)
     @counter-atom))
 
-(defn handle-keyboard-events [^js/HTMLElement curr-cell key-press-info]
-    (println "handle-keyboard-events row-offset: " @sel-row-offset " col-offset: " @sel-col-offset)
+(defn handle-keyboard-events [^js/HTMLElement curr-cell last-cell key-press-info]
+    (debug-log-detailed "handle-keyboard-events row-offset: " @sel-row-offset " col-offset: " @sel-col-offset " curr-cell " (row-col-for-el curr-cell))
    (case (:key key-press-info)
     c/key-ArrowUp
-    (handle-keyboard-arrow-up! curr-cell key-press-info (dec-when>1 sel-row-offset) @sel-col-offset)
+    (handle-keyboard-arrow-up!
+     curr-cell key-press-info
+     (dec-when>1! sel-row-offset (row-for-el last-cell)) @sel-col-offset)
 
     c/key-ArrowDown
-    (handle-keyboard-arrow-down! curr-cell key-press-info (inc-when<max sel-row-offset c/max-rows) @sel-col-offset)
+    (handle-keyboard-arrow-down!
+     curr-cell key-press-info
+     (inc-when<max! sel-row-offset (row-for-el curr-cell) c/max-rows) @sel-col-offset)
 
     c/key-ArrowLeft
-    (handle-keyboard-arrow-left! curr-cell key-press-info @sel-row-offset (dec-when>1 sel-col-offset))
+    (handle-keyboard-arrow-left!
+     curr-cell key-press-info @sel-row-offset
+     (dec-when>1! sel-col-offset (col-for-el last-cell)))
 
     c/key-ArrowRight
-    (handle-keyboard-arrow-right! curr-cell key-press-info @sel-row-offset (inc-when<max sel-col-offset c/max-cols))
+    (handle-keyboard-arrow-right!
+     curr-cell key-press-info @sel-row-offset
+     (inc-when<max! sel-col-offset (col-for-el curr-cell) c/max-cols))
 
     c/key-Tab
     (handle-keyboard-tab! curr-cell key-press-info)
@@ -179,11 +177,16 @@
       (= key c/key-Control)
       (= key c/key-Alt)))
 
+(defn get-key-press-info
+  "returns key press data as a clojure map"
+  [e]
+  {:key (if (is-modifier-key? (.-key e)) nil (.-key e))
+   :shift? (.-shiftKey e)
+   :ctrl? (.-ctrlKey e)
+   :alt? (.-altKey e)})
+
 (defn keyboard-navigation [e]
   (let [curr-cell (selection-cell-ref)
-        key (.-key e)
-        key-press-info {:key (if (is-modifier-key? key) nil key)
-                        :shift? (.-shiftKey e)
-                        :ctrl? (.-ctrlKey e)
-                        :alt? (.-altKey e)}]
-    (handle-keyboard-events curr-cell key-press-info)))
+        last-cell (selection-last-cell-ref)
+        key-press-info (get-key-press-info e)]
+    (handle-keyboard-events curr-cell last-cell key-press-info)))

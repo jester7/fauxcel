@@ -5,31 +5,51 @@
 
 ;;; Various DOM utility functions
 
-(defn querySelector [selector]
+(defn query-selector
+  "Query the DOM for a single element"
+  ^js/HTMLElement [^string selector]
   (js/document.querySelector selector))
 
-(defn querySelectorAll [selector]
+(defn query-selector-all
+  "Query the DOM for all elements matching a selector and return them as a seq"
+  [^string selector]
   (array-seq (js/document.querySelectorAll selector)))
 
-(defn el-by-id [el-id]
+(defn el-by-id
+  "Get an element by its id"
+  ^js/HTMLElement [^string el-id]
   (js/document.getElementById el-id))
 
-(defn style-by-id [el-id]
+(defn id-for-el
+  "Get the id of an element"
+  ^string [^js/HTMLElement el]
+  (let [id (.-id el)]
+    (if (s/blank? id)
+      nil
+      id)))
+
+(defn style-by-id
+  "Get the style object of an element by its id"
+  [^string el-id]
   (.-style (el-by-id el-id)))
 
-(defn contains-class? [el class-name]
+(defn contains-class?
+  "Check if an element has a class name"
+   ^boolean [^js/HTMLElement el ^string class-name]
   (let [cur-class-name (or (.getAttribute el "class") "")] ; set to empty string in case js returns null because class not set
     (s/includes? cur-class-name class-name)))
 
 ;; todo: handle multiple class names
-;; If the element doesn't have the supplied class name yet, it will add it
-;; If it does already have it, does nothing
-(defn add-class-name [el class-name]
+(defn add-class-name
+  "Add a class name to an element if it doesn't already have it"
+  [^js/HTMLElement el ^string class-name]
   (let [cur-class-name (or (.getAttribute el "class") "")] ; set to empty string in case js returns null because class not set
-    (if-not (contains-class? el class-name)
+    (when-not (contains-class? el class-name)
       (.setAttribute el "class" (str cur-class-name " " class-name)))))
 
-(defn swap-class [el from-class to-class]
+(defn swap-class
+  "Swap one class name for another on an element if the from-class is present"
+  [^js/HTMLElement el ^string from-class ^string to-class]
   (when el
     (let [cur-class-name (.getAttribute el "class")
           classes (s/split cur-class-name #"(?i)[\s]+")] ; split class name property into vector of classes
@@ -39,54 +59,46 @@
                ; join classes vector with spaces again and set the className property on the element
                        (s/join " " (concat (c/remove-val-from-vector classes from-class) [to-class])))))))
 
-(defn remove-class [el class]
+(defn remove-class
+  "Remove a class name from an element if it has it"
+  [^js/HTMLElement el ^string class]
   (swap-class el class " "))
 
-(defn toggle-class [el class]
+(defn toggle-class
+  "Toggle a class name on an element"
+  [^js/HTMLElement el ^string class]
   (if (contains-class? el class)
     (swap-class el class " ")
     (add-class-name el class)))
 
 ;; Todo: toggle enabled and disabled classes
-(defn set-enabled-class [el]
+(defn set-enabled-class [^js/HTMLElement el]
   (add-class-name el "enabled"))
 
-;; sets disabled property on an input element and swaps enabled for "disabled" to class names by default
-;; pass false as second argument to avoid changes to css classes 
 (defn input-disable
-  ([el] (set! (.-disabled el) true))
-  ([el set-class?]
+  "Disable an input element and optionally  add class name \"disabled\" to it"
+  ([^js/HTMLElement el] (set! (.-disabled el) true))
+  ([^js/HTMLElement el ^boolean set-class?]
    (input-disable el)
    (when set-class? (add-class-name el "disabled"))))
 
 (defn input-enable
-  ([el] (set! (.-disabled el) false))
-  ([el set-class?]
+  "Enable an input element and optionally remove class name \"disabled\" from it"
+  ([^js/HTMLElement el] (set! (.-disabled el) false))
+  ([^js/HTMLElement el ^boolean set-class?]
    (input-enable el)
    (when set-class? (remove-class el "disabled"))))
 
-(defn touch-device? []
+(defn prevent-default
+  "Prevent the default action of an event"
+  [^js/Event e]
+  (.preventDefault e))
+
+(defn touch-device?
+  "Uses browser feature detection to determine if the device is a touch device"
+  ^boolean []
   (or (.hasOwnProperty js/window "ontouchstart")
       (.hasOwnProperty (.-navigator js/window) "msMaxTouchPoints")))
-
-(defn animate-then [el-id count post-animation-fn]
-  ;;   (.getElementById js/document el-id)
-  (let [element        (js/document.getElementById el-id)
-        style       (.-style element)
-        transform     (str "rotate(" (* 360 (inc count)) "deg)")]
-    ;(js/console.log transform new-transform)
-    (set! (.-transform style) transform))
-  (post-animation-fn))
-
-(defn canvas-init [canvas ctx]
-  (reset! canvas (querySelector "#circles-canvas"))
-  (set! (.-width @canvas) (.-offsetWidth @canvas))
-  (set! (.-height @canvas) (.-offsetHeight @canvas))
-  (reset! ctx (.getContext @canvas "2d")))
-
-(defn ctx-menu-disable []
-  (fn [e] (.preventDefault e)
-    false))
 
 (defn mouse-info [e target-el]
   (when (identical? target-el (.-target e))
@@ -102,7 +114,9 @@
        :left? (#(= btn :left))
        :right? (#(= btn :right))})))
 
-(defn draggable [el container-el]
+(defn draggable
+  "Make an element draggable with the mouse"
+  [^js/HTMLElement el ^js/HTMLElement container-el]
   (let [active? (atom false)
         initial-x (atom 0)
         initial-y (atom 0)
@@ -136,3 +150,4 @@
     (.addEventListener container-el "mousedown" drag-start false)
     (.addEventListener container-el "mouseup" drag-end false)
     (.addEventListener container-el "mousemove" drag false)))
+

@@ -2,8 +2,8 @@
   (:require [fauxcel.base.constants :as c]
             [fauxcel.util.dates :as dates]))
 
-;; round to specified decimal place or default 0, nearest integer
 (defn round
+  "Rounds a number to the nearest integer or to the specified number of decimal places."
   ([num] (round num 0))
   ([num decimal-places]
    (let [power-of-ten-factor (Math/pow 10 decimal-places)]
@@ -13,7 +13,9 @@
 ;; Unlike the built in number? function, this will return true for numeric strings.
 ;; TODO - decide how to handle strings that start numeric but have non-numeric chars in them
 ;; which parseFloat treats as numeric even though they have trailing non-numeric chars
-(defn numeric? [x]
+(defn numeric? 
+  "Returns true if the value is a number or a numeric string."
+  ^boolean [x]
   (= (js/parseFloat x) (js/parseFloat x))) ; parseFloat returns NaN, NaN can never be equal to another NaN
 
 ;; ---------------------------------------------
@@ -32,22 +34,26 @@
       :else
       (if (re-seq #"\." val) (js/parseFloat val) (js/parseInt val)))))
 
-;; ---------------------------------------------
-;; Returns the sum of a list of numbers
-(defn sum [& nums]
+(defn sum
+  "Returns the sum of one or more numbers.
+  Works with combinations of numbers and strings with numeric values."
+  [& nums]
   (reduce + (map #(eval-number %1 true) nums)))
 
-;; ---------------------------------------------
-;; Returns the average of a list of numbers
 (defn average
-  ([nums] ; invoked when single arg is already a seq 
-   (apply average nums))
-  ([& nums] ; variadic version
-   (/ (reduce + nums) (count nums))))
+  "Returns the average of one or more numbers."
+  ([] nil)
+  (^number [nums]
+   (if (seq? nums)
+     (/ (reduce + nums) (count nums))
+     (if (numeric? nums) (eval-number nums) nil)))
+  (^number [x & more]
+   (let [nums (cons x more)]
+     (/ (reduce + nums) (count nums)))))
 
-;; ---------------------------------------------
-;; Returns the standard deviation of a list of numbers
-(defn standard-deviation [& nums]
+(defn standard-deviation
+  "Returns the standard deviation of a list of numbers."
+  [& nums]
   (let [nums (map eval-number nums) ; convert numeric strings to numbers
         avg (average nums)] ; get the average
     (->> nums
@@ -56,9 +62,9 @@
          (average) ; get the average of the squared numbers
          (Math/sqrt))))
 
-;; ---------------------------------------------
-;; Calculates the median of a list of numbers
-(defn median [& nums]
+(defn median
+  "Returns the median of a list of numbers."
+  [& nums]
   (let [nums (map eval-number nums) ; convert numeric strings to numbers
         nums (sort nums) ; sort the numbers
         len (count nums)] ; get the length of the list

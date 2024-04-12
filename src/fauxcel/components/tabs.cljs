@@ -40,7 +40,7 @@
 (defn auto-formula-panel []
   (let [sum-formula (parse-formula (str "=SUM(" @current-selection ")"))
         count-formula (parse-formula (str "=COUNT(" @current-selection ")"))
-        average-formula (parse-formula (str "=AVERAGE(" @current-selection ")"))]
+        average-formula (parse-formula (str "=AVG(" @current-selection ")"))]
     [:div.auto-formula-panel
      (if (not-empty-cell-range? @current-selection)
        [:<> ; react fragment

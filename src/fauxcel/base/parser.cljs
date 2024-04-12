@@ -1,94 +1,14 @@
 (ns fauxcel.base.parser
   (:require
+   [fauxcel.base.functions :as fn :refer
+    [operator? operand? function? get-function
+     operators precedence exp minus left-p right-p comma]]
+   [fauxcel.base.tokenization :as tok]
    [fauxcel.util.math :as m]
    [reagent.core :as r]
-   [clojure.string :as s]
    [fauxcel.base.utility :as util :refer
-    [cell-value-for cell-ref? expand-cell-range]]
-   [fauxcel.base.constants :as c]
-   [fauxcel.util.dates :as dates]
-   [fauxcel.util.debug :as debug :refer [debug-log debug-log-detailed do-with-timer]]))
-
-;;; This file contains the core parser functions for evaluating formulas
-;;; including algebraic expressions, functions and cell references.
-;;; It is based on the Shunting Yard algorithm by Edsger Dijkstra
-;;; (https://en.wikipedia.org/wiki/Shunting_yard_algorithm)
-;;; adapted to include support for variable argument functions (multi-arity).
-;;; Tokenization is done with a regular expression. Unary minus is handled
-;;; by swapping it with multiplication by -1 and surrounding with parentheses.
-
-(def ^:const left-p "(")
-(def ^:const right-p ")")
-(def ^:const exp "^")
-(def ^:const minus "-")
-(def ^:const comma ",")
-(def ^:const multi-arity 999) ; TODO check if it can be set to -1 instead
-
-; Map of arithmetic operators to functions
-(def ^:const operators {"^" {:fn Math/pow :precedence 3 :arity 2 :nil-equals-zero? true}
-                        "*" {:fn * :precedence 2 :arity 2 :nil-equals-zero? true}
-                        "/" {:fn / :precedence 2 :arity 2 :nil-equals-zero? true}
-                        "+" {:fn + :precedence 1 :arity 2 :nil-equals-zero? true} ; maps to + function with arity 2
-                        "-" {:fn - :precedence 1 :arity 2 :nil-equals-zero? true}})
-
-; Map of string tokens to functions
-(def ^:const functions {"SUM" {:fn m/sum :precedence 1 :arity multi-arity :nil-equals-zero? true}
-                        "AVG" {:fn m/average :precedence 1 :arity multi-arity :nil-equals-zero? true}
-                        "ROUND" {:fn m/round :precedence 1 :arity 2 :nil-equals-zero? true}
-                        "COUNTA" {:fn m/count-all :precedence 1 :arity multi-arity :nil-equals-zero? false}
-                        "COUNT" {:fn m/count-numeric :precedence 1 :arity multi-arity :nil-equals-zero? false}
-                        "ABS" {:fn abs :precedence 1 :arity 1 :nil-equals-zero? true}
-                        "STDEV" {:fn m/standard-deviation :precedence 1 :arity multi-arity :nil-equals-zero? true}
-                        "MEDIAN" {:fn m/median :precedence 1 :arity multi-arity :nil-equals-zero? true}
-                        "RAND" {:fn m/random-number :precedence 1 :arity 2 :nil-equals-zero? true}
-                        "TODAY" {:fn dates/today :precedence 1 :arity 1 :nil-equals-zero? true}
-                        "CONCAT" {:fn str :precedence 1 :arity multi-arity :nil-equals-zero? false}})
-
-;; Create the dynamic regex pattern using re-pattern
-(def dynamic-tokenize-re
-  (re-pattern (str "\\,|" (str (s/join "|" (keys functions)))
-                   "|[[a-zA-Z]{1,2}[0-9]{0,4}[\\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\\.?[0-9]+]*|[\\/*\\-+^\\(\\)]"
-                   "|[[a-zA-Z]{1,2}[0-9]{1,4}]*"
-                   "|(?<=\")[^,]*?(?=\")")))
-
-(def tokenize-re dynamic-tokenize-re)
-
-(defn get-function [^string token-str]
-  (if (nil? token-str)
-    nil
-    (functions (s/upper-case token-str))))
-
-(defn function? ^boolean [token-str]
-  (cond
-    (nil? token-str) false
-    (number? token-str) false
-    :else (not (nil? (get-function token-str)))))
-
-(defn operator? ^boolean [^string token-str]
-  (not (nil? (operators token-str))))
-
-(defn operand? ^boolean [^string token-str]
-  (and (not= left-p token-str) (not= comma token-str) (not (function? token-str)) (not= right-p token-str) (nil? (operators token-str))))
-
-(defn get-arity [^string token-str]
-  (cond
-    (function? token-str) (:arity (get-function token-str))
-    (operator? token-str) 2
-    :else 0))
-
-(defn strip-whitespace ^string [^string input-str] ; discards whitespace, used before tokenizing
-  (s/replace input-str #"\s(?=(?:\"[^\"]*\"|[^\"])*$)" ""))
-
-;;; Turns an algebraic expression string into a sequence of strings with individual tokens 
-(defn tokenize-as-str [^string expression-str]
-  (let [cell-ref-re c/cell-range-re
-        expanded-refs (s/replace expression-str
-                                 cell-ref-re
-                                 #(str (s/join "," (expand-cell-range (%1 0)))))]
-    ;(println "expression-str: " expression-str)
-    ;(println "expanded-refs: " expanded-refs)
-    ;(println ">>> tokenize-re: " (re-seq tokenize-re (strip-whitespace expanded-refs)))
-    (re-seq tokenize-re (s/upper-case (strip-whitespace expanded-refs)))))
+    [cell-value-for cell-ref?]]
+   [fauxcel.util.debug :as debug :refer [debug-log do-with-timer]]))
 
 ;;; Scans tokens for minus signs and determines if the minus sign should
 ;;; be treated as a subtraction operator or a unary negation operator.
@@ -96,7 +16,6 @@
 ;;; with parentheses. This effectively makes unary minus the highest priority
 ;;; operator (same as Excel, Numbers and Google Sheets).
 (defn swap-unary-minus [infix-tokens]
-  (debug-log-detailed "(swap-unary-minus) infix-tokens arg: " infix-tokens)
   (loop [original-tokens (into [] infix-tokens)
          prev-token nil ; nil at start of loop
          prev-token-unary? false ; false at start of loop
@@ -119,9 +38,6 @@
                    (conj new-tokens token))))) ; else just add the token and nothing extra
       new-tokens)))
 
-;;; Looks up the precedence value from the operators map. Returns 0 if not found.
-(defn precedence [v]
-  (or (:precedence (operators v)) 0))
 
 (defn eval-cell-ref
   ([cell-ref] (eval-cell-ref cell-ref true))
@@ -154,11 +70,10 @@
 
     ; must be a number then
     :else
-    (m/eval-number token)))
+    (do (println "token" token)(m/eval-number token))))
 
 ;;; Needed to handle parentheses swapping for expression reversal
 (defn swap-parentheses [expression] ; turns "(" into ")" and vice versa
-  (debug-log-detailed "swap-parentheses expression arg: " expression)
   (let [new-expression (atom [])]
     (dotimes [i (count expression)]
       (let [token (nth expression i)]
@@ -166,7 +81,6 @@
           (= token left-p) (swap! new-expression assoc i right-p)
           (= token right-p) (swap! new-expression assoc i left-p)
           :else (swap! new-expression assoc i token))))
-    (debug-log-detailed "swap-parentheses returning new-expression: " @new-expression)
     @new-expression))
 
 ;;; Pops the operator stack while the predicate function evaluates to true and
@@ -191,21 +105,12 @@
                            (take arity @out-stack)))))
       (swap! op-stack pop))))
 
-;;; Parses any tokenized infix algebraic expression and returns the result.
-;;; TODO After switching to vectors in all of the eval functions,
-;;; I've now got a weird mix of an infix expression vector with swapped parentheses
-;;; and having to process the vector in reverse order. TODO investigate and simplify.
-;;; Performance has increased over 12x from the original version
-;;; when processing ranges with 1000's of cells so I'm leaving as is for now.
-;;; TODO Potential improvement idea: eval all tokens in place and return vector of
-;;; operands, operators, functions, etc. Then offload to web worker to eval the vector.
-;;; Parentheses handling would be done by having vectors within vectors.
-;;; TODO catch exceptions and return error msg or throw exception
 (defn infix-expression-eval [reversed-expr]
   (let [num-items (count reversed-expr)
         op-stack (atom ())
         arity-stack (atom ())
         out-stack (atom ())]
+        (debug-log "...>>>reversed-expr" reversed-expr)
     (dotimes [i num-items]
 
       (let [token (reversed-expr (- num-items i 1))]
@@ -217,7 +122,7 @@
           ; left parenthesis 
           (= left-p token)
           (swap! op-stack conj token)
-
+          
           ; right parenthesis
           (= right-p token)
           (do
@@ -253,10 +158,14 @@
     ;; Once all tokens have been processed, pop and eval the stacks while op stack is not empty.
     (pop-stack-while! #(seq @op-stack) op-stack out-stack arity-stack)
     ;; Assuming the expression was a valid one, the last item is the final result.
-    (eval-token (peek @out-stack)))) ; handle edge case where formula is a single cell reference
+    (let [peek-result (peek @out-stack)]
+       (if (not (nil? peek-result))
+         (eval-token peek-result)
+         "#ERROR")
+       ))) ; handle edge case where formula is a single cell reference
 
 (defn infix-expression-prepare [infix-expression]
-  (let [reversed-expr (swap-parentheses (swap-unary-minus (tokenize-as-str infix-expression)))]
+  (let [reversed-expr (swap-parentheses (swap-unary-minus (tok/tokenize infix-expression)))]
     (debug-log "infix-expression was: " infix-expression)
     (do-with-timer "infix-expression-eval" (infix-expression-eval reversed-expr))))
 
