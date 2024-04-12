@@ -31,31 +31,42 @@
                         "TODAY" {:fn dates/today :precedence 1 :arity 1 :nil-equals-zero? true}
                         "CONCAT" {:fn str :precedence 1 :arity multi-arity :nil-equals-zero? false}})
 
-(defn get-function [^string token-str]
+(defn get-function
+  "Returns the function associated with the token string. Returns nil if not found."
+  [^string token-str]
   (if (nil? token-str)
     nil
     (functions (s/upper-case token-str))))
 
-(defn function? ^boolean [token-str]
+(defn function?
+  "Returns true if the token string is a function."
+  ^boolean [token-str]
   (cond
     (nil? token-str) false
     (number? token-str) false
     :else (not (nil? (get-function token-str)))))
 
-(defn operator? ^boolean [^string token-str]
+(defn operator?
+  "Returns true if the token string is an operator."
+  ^boolean [^string token-str]
   (not (nil? (operators token-str))))
 
 
-(defn operand? ^boolean [^string token-str]
+(defn operand?
+  "Returns true if the token string is an operand."
+  ^boolean [^string token-str]
   (and (not= left-p token-str) (not= comma token-str) (not (function? token-str))
        (not= right-p token-str) (nil? (operators token-str))))
 
-(defn get-arity [^string token-str]
+(defn get-arity
+  "Returns the arity of the function associated with the token string. Returns 0 if not found."
+  [^string token-str]
   (cond
     (function? token-str) (:arity (get-function token-str))
     (operator? token-str) 2
     :else 0))
 
-;;; Looks up the precedence value from the operators map. Returns 0 if not found.
-(defn precedence [v]
-  (or (:precedence (operators v)) 0))
+(defn precedence
+  "Returns the precedence of the operator associated with the token string. Returns 0 if not found."
+  [^string token-str]
+  (or (:precedence (operators token-str)) 0))
