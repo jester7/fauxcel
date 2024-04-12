@@ -1,6 +1,6 @@
 (ns fauxcel.components.spreadsheet
   (:require
-   [fauxcel.base.state :as state :refer [cells-map edit-mode current-selection]]
+   [fauxcel.base.state :as state :refer [cells-map current-selection]]
    [fauxcel.base.constants :as constants :refer [cells-parent-id max-cols max-rows]]
    [fauxcel.base.parser :as parser]
    [fauxcel.input-handlers.keyboard :as keyboard :refer [keyboard-navigation]]

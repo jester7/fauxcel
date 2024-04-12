@@ -2,7 +2,6 @@
   (:require
    [reagent.core :as r]
    [reagent.dom :as d]
-   [fauxcel.base.state :as state :refer [current-cell-sheet]]
    [fauxcel.components.toolbar.toolbar :refer [toolbar]]
    [fauxcel.components.spreadsheet :refer [cellgrid]]
    [fauxcel.components.tabs :refer [cell-sheet-footer]]
