@@ -461,29 +461,29 @@ h3 {
 }
 
 
-#clippy {
-  background-image: url('/images/clippy-head-scratch.gif');
-  width: 100px;
-  height: 94px;
+#lispy {
+  background-image: url('/images/fauxcel-lispy-mascot-temp.png');
+  width: 119px;
+  height: 93px;
   position: absolute;
   margin-left: 80%;
   margin-top: 20%;
   z-index: 100;
   cursor: grab;
   background-size: contain;
-  opacity: 0.95;
-  transition: opacity 0.33s ease-in-out;
+  opacity: 0.85;
+  transition: opacity 0.25s ease-in-out;
 }
 
-#clippy:hover {
+#lispy:hover {
   opacity: 1;
 }
 
-#clippy:hover::after {
+#lispy:hover::after {
   font-family: new-atten, sans-serif;
   font-weight: 400;
   font-style: normal;
-  content: "fauXcel is not finished yet but will be feature complete soon 😊. For now you can only drag me around. In a future version I will be connected to ChatGPT 😏. All math operators with cell references and ranges work, in addition to the formulas AVG, SUM and ROUND.";
+  content: "fauxcel is not finished yet but will be feature complete soon 😊. For now you can only drag me around. I will have AI capabilities soon. All math operators with cell references and ranges work, in addition to the formulas AVG, SUM and ROUND.";
   position: absolute;
   display: block;
   border: 1px solid black;

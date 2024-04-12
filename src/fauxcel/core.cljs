@@ -14,7 +14,7 @@
 (defn home-page []
   [:div.appwrapper
    [toolbar]
-   [:div#clippy]
+   [:div#lispy]
    [cellgrid]
    [cell-sheet-footer]])
 
@@ -25,5 +25,5 @@
   (d/render [home-page] (.getElementById js/document "app")))
 
 (defn ^:export init! []
-  (r/after-render #(dom/draggable (dom/query-selector "#clippy") (dom/query-selector "html")))
+  (r/after-render #(dom/draggable (dom/query-selector "#lispy") (dom/query-selector "html")))
   (mount-root))
