@@ -16,11 +16,11 @@
                         "+" {:fn + :precedence 1 :arity 2 :nil-equals-zero? true} ; maps to + function with arity 2
                         "-" {:fn - :precedence 1 :arity 2 :nil-equals-zero? true}})
 
-(def ^:const multi-arity 999) ; TODO check if it can be set to -1 instead
+(def ^:const multi-arity -1)
 
 ; Map of string tokens to functions
 (def ^:const functions {"SUM" {:fn m/sum :precedence 1 :arity multi-arity :nil-equals-zero? true}
-                        "AVG" {:fn m/average :precedence 1 :arity multi-arity :nil-equals-zero? true}
+                        "AVG" {:fn m/average :precedence 1 :arity multi-arity :nil-equals-zero? false}
                         "ROUND" {:fn m/round :precedence 1 :arity 2 :nil-equals-zero? true}
                         "COUNTA" {:fn m/count-all :precedence 1 :arity multi-arity :nil-equals-zero? false}
                         "COUNT" {:fn m/count-numeric :precedence 1 :arity multi-arity :nil-equals-zero? false}
