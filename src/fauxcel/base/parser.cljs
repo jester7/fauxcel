@@ -1,7 +1,7 @@
 (ns fauxcel.base.parser
   (:require
    [fauxcel.base.functions :as fn :refer
-    [operator? operand? function? get-function
+    [operator? operand? function? get-function get-arity
      operators precedence exp minus left-p right-p comma]]
    [fauxcel.base.tokenization :as tok]
    [fauxcel.util.math :as m]
@@ -70,54 +70,74 @@
 
     ; must be a number then
     :else
-    (do (println "token" token)(m/eval-number token))))
+    (do
+      (debug-log ":else eval-number for token: " token)
+      (m/eval-number token))))
 
 ;;; Needed to handle parentheses swapping for expression reversal
 (defn swap-parentheses [expression] ; turns "(" into ")" and vice versa
-  (let [new-expression (atom [])]
-    (dotimes [i (count expression)]
-      (let [token (nth expression i)]
-        (cond
-          (= token left-p) (swap! new-expression assoc i right-p)
-          (= token right-p) (swap! new-expression assoc i left-p)
-          :else (swap! new-expression assoc i token))))
-    @new-expression))
+  (loop [remaining expression
+         new-expression []]
+    (if (empty? remaining)
+      (into () new-expression)
+      (let [token (first remaining)
+            new-token (case token
+                        left-p right-p
+                        right-p left-p
+                        token)]
+        (recur (rest remaining)
+               (conj new-expression new-token))))))
 
 ;;; Pops the operator stack while the predicate function evaluates to true and
 ;;; pushes the result to the output/operand stack. Used by infix-expression-eval
-(defn pop-stack-while! [predicate op-stack out-stack arity-stack]
+(defn pop-stack-while! [predicate op-stack out-stack arity]
   (while (predicate)
     (let [op-or-fn-token (peek @op-stack)
+          fn-arity (get-arity op-or-fn-token)
           func? (function? op-or-fn-token) ; unlike built-in fn? , function? only returns true for non operator functions in function map
           nil-equals-zero? (cond (operator? op-or-fn-token)
                                  (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
                                  (function? op-or-fn-token)
                                  (:nil-equals-zero? (get-function op-or-fn-token))) ; get nil-equals-zero? flag from functions map
-          arity (if func? (peek @arity-stack) 2)] ; assume binary operator if not a function 
-      (when func? (swap! arity-stack pop))
+          arity (cond
+                  (and (= fn-arity 0) (> @arity 0)) ; throw exception
+                  (throw (ex-info "Expected 0 arguments but found more than 0" {:arity @arity}))
+
+                  (and (not= fn-arity fn/multi-arity) (< @arity fn-arity))
+                  (throw (ex-info "Expected more arguments but found less" {:arity @arity}))
+
+                  :else
+                  (do
+                    ;(reset! arity 0)
+                  @arity))]
+      ;(when func? (swap! arity-stack pop))
+      
       (reset! out-stack
               (conj
                (nthrest @out-stack arity) ; pop operands equal to arity of func
                (apply (eval-token op-or-fn-token)
                       (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
-                              (or %1 0) ; replace nil with 0
-                              %1) ; else just eval the token
+                              (or % 0) ; replace nil with 0
+                              %) ; else just eval the token
                            (take arity @out-stack)))))
       (swap! op-stack pop))))
 
 (defn infix-expression-eval [reversed-expr]
   (let [num-items (count reversed-expr)
         op-stack (atom ())
-        arity-stack (atom ())
+        arity (atom 0)
         out-stack (atom ())]
         (debug-log "...>>>reversed-expr" reversed-expr)
     (dotimes [i num-items]
 
-      (let [token (reversed-expr (- num-items i 1))]
+      (let [token (nth reversed-expr i)]
+        (debug/debug-log-detailed "infix-expression-eval token" token)
         (cond
           ; if operand, adds it to the operand stack
           (operand? token)
-          (swap! out-stack conj (eval-token token))
+          (do
+            (swap! arity inc)
+            (swap! out-stack conj (eval-token token)))
 
           ; left parenthesis 
           (= left-p token)
@@ -127,12 +147,12 @@
           (= right-p token)
           (do
             (pop-stack-while!
-             #(not= left-p (peek @op-stack)) op-stack out-stack arity-stack)
+             #(not= left-p (peek @op-stack)) op-stack out-stack arity)
             (swap! op-stack pop))
 
           ; comma
-          (= comma token)
-          (reset! arity-stack (conj (rest @arity-stack) (inc (peek @arity-stack))))
+          ;(= comma token)
+          ;(swap! arity inc)
 
           ; if token is an operator and is the first one found in this expression
           (and (operator? token) (empty? @op-stack))
@@ -140,10 +160,10 @@
 
           (function? token)
           (do
-            (reset! arity-stack (conj (rest @arity-stack) (inc (peek @arity-stack))))
+            (debug/debug-log-detailed "arity function" @arity token)
             (swap! op-stack conj token)
             (pop-stack-while!
-             #(function? (peek @op-stack)) op-stack out-stack arity-stack))
+             #(function? (peek @op-stack)) op-stack out-stack arity))
             ;(swap! op-stack conj token) ;)
 
           ; handles all other operators when not the first one
@@ -153,10 +173,10 @@
              #(or (< (precedence token) (precedence (peek @op-stack)))
                   (and (<= (precedence token) (precedence (peek @op-stack)))
                        (= exp token)))
-             op-stack out-stack arity-stack)
+             op-stack out-stack arity)
             (swap! op-stack conj token)))))
     ;; Once all tokens have been processed, pop and eval the stacks while op stack is not empty.
-    (pop-stack-while! #(seq @op-stack) op-stack out-stack arity-stack)
+    (pop-stack-while! #(seq @op-stack) op-stack out-stack arity)
     ;; Assuming the expression was a valid one, the last item is the final result.
     (let [peek-result (peek @out-stack)]
        (if (not (nil? peek-result))
