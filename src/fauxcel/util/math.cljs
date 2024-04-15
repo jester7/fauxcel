@@ -41,15 +41,19 @@
   (reduce + (map #(eval-number %1 true) nums)))
 
 (defn average
-  "Returns the average of one or more numbers."
+  "Returns the average of one or more numbers or numeric strings.
+  Returns nil if no numbers are provided."
   ([] nil)
   (^number [nums]
    (if (seq? nums)
-     (/ (reduce + nums) (count nums))
+     (apply average nums)
      (if (numeric? nums) (eval-number nums) nil)))
   (^number [x & more]
-   (let [nums (cons x more)]
-     (/ (reduce + nums) (count nums)))))
+   (let [nums (map eval-number (filter #(not (nil? %1)) (cons x more)))
+         count (count nums)]
+     (if (> count 0)
+       (/ (reduce + nums) count)
+       nil))))
 
 (defn standard-deviation
   "Returns the standard deviation of a list of numbers."
