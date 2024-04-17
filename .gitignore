@@ -149,8 +149,17 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# vercel
 .vercel/
 api/
+
+# emacs temp files
 \#*\#
 *.*\~
 .\#*
+
+# clj kondo
+.clj-kondo
+
+# LSP
+.lsp
