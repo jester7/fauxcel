@@ -8,14 +8,15 @@
    [reagent.core :as r]
    [fauxcel.base.utility :as util :refer
     [cell-value-for cell-ref?]]
-   [fauxcel.util.debug :as debug :refer [debug-log do-with-timer]]))
+   [fauxcel.util.debug :as debug :refer [debug-log debug-log-detailed do-with-timer]]))
 
-;;; Scans tokens for minus signs and determines if the minus sign should
-;;; be treated as a subtraction operator or a unary negation operator.
-;;; If the latter it replaces the token with multiplication by -1 and surrounds
-;;; with parentheses. This effectively makes unary minus the highest priority
-;;; operator (same as Excel, Numbers and Google Sheets).
-(defn swap-unary-minus [infix-tokens]
+;; TODO - needs better error handling for invalid formulas
+
+(defn swap-unary-minus
+  "Takes a seq of tokens and returns a new vector with unary minus replaced by -1 *
+   and surrounded by parentheses. This is done to make unary minus the highest
+   priority operator."
+  [infix-tokens]
   (loop [original-tokens (into [] infix-tokens)
          prev-token nil ; nil at start of loop
          prev-token-unary? false ; false at start of loop
@@ -38,7 +39,6 @@
                    (conj new-tokens token))))) ; else just add the token and nothing extra
       new-tokens)))
 
-
 (defn eval-cell-ref
   ([cell-ref] (eval-cell-ref cell-ref true))
   ([cell-ref when-not-cell-ref-return-nil?]
@@ -47,9 +47,10 @@
                   (if (m/numeric? cell-data) (m/eval-number cell-data) cell-data)))
      (if when-not-cell-ref-return-nil? nil cell-ref))))
 
-;;; Takes a token in string format and returns the corresponding function (if an operator)
-;;; or the text in the cell (nil if empty) or the numeric value.
-(defn eval-token [token]
+(defn eval-token
+  "Evaluates a single token string and returns the corresponding function,
+  cell value, or number."
+  [^string token]
   (cond
     ; If cell ref, evaluate and return 
     (cell-ref? token) ; moved this cond up for formulas with many cell refs, slight performance boost maybe?
@@ -62,20 +63,19 @@
     (function? token)
     (:fn (get-function token))
 
-    ;(cell-range? token) ; TODO check if safe to delete; moved cell range expansion to tokenizer
-    ;(expand-cell-range token) 
-
     (and (string? token) (not (m/numeric? token)))
     token ; if string and not numeric, return the string
 
-    ; must be a number then
+    ;; must be a number then
     :else
     (do
-      (debug-log ":else eval-number for token: " token)
+      (debug-log-detailed ":else eval-number for token: " token)
       (m/eval-number token))))
 
-;;; Needed to handle parentheses swapping for expression reversal
-(defn swap-parentheses [expression] ; turns "(" into ")" and vice versa
+(defn swap-parentheses
+  "Swaps parentheses in an expression. Used to reverse the expression for
+  postfix evaluation."
+  [expression]
   (loop [remaining expression
          new-expression []]
     (if (empty? remaining)
@@ -88,38 +88,41 @@
         (recur (rest remaining)
                (conj new-expression new-token))))))
 
-;;; Pops the operator stack while the predicate function evaluates to true and
-;;; pushes the result to the output/operand stack. Used by infix-expression-eval
-(defn pop-stack-while! [predicate op-stack out-stack arity]
+;; TODO - convert to loop/recur
+(defn pop-stack-while!
+  "Pops the operator stack while the predicate function evaluates to true and
+  pushes the result to the output/operand stack. Used by infix-expression-eval."
+  [predicate op-stack out-stack arity]
   (while (predicate)
     (let [op-or-fn-token (peek @op-stack)
           fn-arity (get-arity op-or-fn-token)
-          func? (function? op-or-fn-token) ; unlike built-in fn? , function? only returns true for non operator functions in function map
-          nil-equals-zero? (cond (operator? op-or-fn-token)
-                                 (:nil-equals-zero? (operators op-or-fn-token)) ; get nil-equals-zero? flag from operators map
-                                 (function? op-or-fn-token)
-                                 (:nil-equals-zero? (get-function op-or-fn-token))) ; get nil-equals-zero? flag from functions map
+          op? (operator? op-or-fn-token)
+          func? (function? op-or-fn-token)
+          nil-equals-zero? (fn/nil-equals-zero? op-or-fn-token)
           arity (cond
-                  (and (= fn-arity 0) (> @arity 0)) ; throw exception
-                  (throw (ex-info "Expected 0 arguments but found more than 0" {:arity @arity}))
-
-                  (and (not= fn-arity fn/multi-arity) (< @arity fn-arity))
-                  (throw (ex-info "Expected more arguments but found less" {:arity @arity}))
-
+                  (and (or func? op?) (= fn-arity 0) (> @arity 0)) ; throw exception
+                  (throw (ex-info (str "Expected 0 arguments but found more token arity fn-arity "
+                                       op-or-fn-token " " @arity " " fn-arity) {:arity @arity}))
+                  (and (or func? op?) (not= fn-arity fn/multi-arity) (< @arity fn-arity))
+                  (throw (ex-info (str "Expected more arguments but found less "
+                                       fn-arity " " @arity) {:arity @arity}))
+                  ;;(and (or func? op?) (not= fn-arity fn/multi-arity) (> @arity fn-arity))
+                  ;;(throw (ex-info (str "Expected less arguments but found more "
+                  ;;                     fn-arity " " @arity) {:arity @arity}))
                   :else
-                  (do
-                    ;(reset! arity 0)
-                  @arity))]
-      ;(when func? (swap! arity-stack pop))
-      
-      (reset! out-stack
-              (conj
-               (nthrest @out-stack arity) ; pop operands equal to arity of func
-               (apply (eval-token op-or-fn-token)
-                      (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
-                              (or % 0) ; replace nil with 0
-                              %) ; else just eval the token
-                           (take arity @out-stack)))))
+                  @arity)]
+      (debug/debug-log-detailed "out-stack before pop-stack-while!" @out-stack)
+      (debug/debug-log-detailed "op-stack before pop-stack-while!" @op-stack)
+      (debug/debug-log-detailed "nthrest @out-stack arity" (nthrest @out-stack arity))
+      (when (or func? op?)
+        (reset! out-stack
+                (conj
+                 (nthrest @out-stack arity) ; pop operands equal to arity of func
+                 (apply (eval-token op-or-fn-token)
+                        (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
+                                (or % 0) ; replace nil with 0
+                                %) ; else just eval the token
+                             (take arity @out-stack))))))
       (swap! op-stack pop))))
 
 (defn infix-expression-eval [reversed-expr]
@@ -127,9 +130,8 @@
         op-stack (atom ())
         arity (atom 0)
         out-stack (atom ())]
-        (debug-log "...>>>reversed-expr" reversed-expr)
+    (debug-log ">>> reversed-expr" reversed-expr)
     (dotimes [i num-items]
-
       (let [token (nth reversed-expr i)]
         (debug/debug-log-detailed "infix-expression-eval token" token)
         (cond
@@ -141,32 +143,31 @@
 
           ; left parenthesis 
           (= left-p token)
-          (swap! op-stack conj token)
-          
+          (do
+            (reset! arity 0)
+            (swap! op-stack conj token))
+
           ; right parenthesis
           (= right-p token)
-          (do
-            (pop-stack-while!
+          (pop-stack-while!
              #(not= left-p (peek @op-stack)) op-stack out-stack arity)
-            (swap! op-stack pop))
 
-          ; comma
-          ;(= comma token)
-          ;(swap! arity inc)
+          ;; comma ; TODO - don't tokenize commas in the first place
+          ;;(= comma token)
 
-          ; if token is an operator and is the first one found in this expression
+          ;; if token is an operator and is the first one found in this expression
           (and (operator? token) (empty? @op-stack))
           (swap! op-stack conj token)
 
           (function? token)
           (do
-            (debug/debug-log-detailed "arity function" @arity token)
+            (debug/debug-log-detailed "function? is true: arity - token" @arity token)
             (swap! op-stack conj token)
             (pop-stack-while!
-             #(function? (peek @op-stack)) op-stack out-stack arity))
-            ;(swap! op-stack conj token) ;)
+             #(function? (peek @op-stack)) op-stack out-stack arity)
+            (swap! arity inc))
 
-          ; handles all other operators when not the first one
+          ;; handles all other operators when not the first one
           (operator? token)
           (do
             (pop-stack-while!
@@ -174,15 +175,15 @@
                   (and (<= (precedence token) (precedence (peek @op-stack)))
                        (= exp token)))
              op-stack out-stack arity)
-            (swap! op-stack conj token)))))
+            (swap! op-stack conj token)
+            (swap! arity inc)))))
     ;; Once all tokens have been processed, pop and eval the stacks while op stack is not empty.
     (pop-stack-while! #(seq @op-stack) op-stack out-stack arity)
     ;; Assuming the expression was a valid one, the last item is the final result.
     (let [peek-result (peek @out-stack)]
-       (if (not (nil? peek-result))
-         (eval-token peek-result)
-         "#ERROR")
-       ))) ; handle edge case where formula is a single cell reference
+      (if (not (nil? peek-result))
+        (eval-token peek-result) ; handle edge case where formula is a single cell reference
+        "#ERROR")))) ; TODO - better error handling and exception use
 
 (defn infix-expression-prepare [infix-expression]
   (let [reversed-expr (swap-parentheses (swap-unary-minus (tok/tokenize infix-expression)))]
