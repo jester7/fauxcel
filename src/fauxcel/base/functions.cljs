@@ -51,7 +51,6 @@
   ^boolean [^string token-str]
   (not (nil? (operators token-str))))
 
-
 (defn operand?
   "Returns true if the token string is an operand."
   ^boolean [^string token-str]
@@ -70,3 +69,15 @@
   "Returns the precedence of the operator associated with the token string. Returns 0 if not found."
   [^string token-str]
   (or (:precedence (operators token-str)) 0))
+
+(defn nil-equals-zero?
+  "Returns true if the function or operator associated with
+  the token string treats nil as zero."
+  [^string token-str]
+  (cond (function? token-str)
+        (:nil-equals-zero? (get-function token-str))
+
+        (operator? token-str)
+        (:nil-equals-zero? (operators token-str))
+
+        :else false))
