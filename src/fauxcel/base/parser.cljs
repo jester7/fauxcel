@@ -92,45 +92,46 @@
 (defn pop-stack-while!
   "Pops the operator stack while the predicate function evaluates to true and
   pushes the result to the output/operand stack. Used by infix-expression-eval."
-  [predicate op-stack out-stack arity]
+  [predicate op-stack out-stack arg-count]
   (while (predicate)
     (let [op-or-fn-token (peek @op-stack)
           fn-arity (get-arity op-or-fn-token)
           op? (operator? op-or-fn-token)
           func? (function? op-or-fn-token)
           nil-equals-zero? (fn/nil-equals-zero? op-or-fn-token)
-          arity (cond
-                  (and (or func? op?) (= fn-arity 0) (> @arity 0)) ; throw exception
+          num-args (cond
+                  (and (or func? op?) (= fn-arity 0) (> @arg-count 0)) ; throw exception
                   (throw (ex-info (str "Expected 0 arguments but found more token arity fn-arity "
-                                       op-or-fn-token " " @arity " " fn-arity) {:arity @arity}))
-                  (and (or func? op?) (not= fn-arity fn/multi-arity) (< @arity fn-arity))
+                                       op-or-fn-token " " @arg-count " " fn-arity) {:arity @arg-count}))
+                  (and (or func? op?) (not= fn-arity fn/multi-arity) (< @arg-count fn-arity))
                   (throw (ex-info (str "Expected more arguments but found less "
-                                       fn-arity " " @arity) {:arity @arity}))
-                  ;;(and (or func? op?) (not= fn-arity fn/multi-arity) (> @arity fn-arity))
-                  ;;(throw (ex-info (str "Expected less arguments but found more "
-                  ;;                     fn-arity " " @arity) {:arity @arity}))
+                                       fn-arity " " @arg-count) {:arity @arg-count}))
+                  (and (or func? op?) (not= fn-arity fn/multi-arity) (> @arg-count fn-arity))
+                  (throw (ex-info (str "Expected less arguments but found more "
+                                      fn-arity " " @arg-count) {:arity @arg-count}))
                   :else
-                  @arity)]
+                  @arg-count)]
       (debug/debug-log-detailed "out-stack before pop-stack-while!" @out-stack)
       (debug/debug-log-detailed "op-stack before pop-stack-while!" @op-stack)
-      (debug/debug-log-detailed "nthrest @out-stack arity" (nthrest @out-stack arity))
+      (debug/debug-log-detailed "nthrest @out-stack num-args" (nthrest @out-stack num-args))
       (when (or func? op?)
         (reset! out-stack
                 (conj
-                 (nthrest @out-stack arity) ; pop operands equal to arity of func
+                 (nthrest @out-stack num-args) ; pop operands equal to num-args of func
                  (apply (eval-token op-or-fn-token)
                         (map #(if nil-equals-zero? ; if function or operator has nil-equals-zero? flag
                                 (or % 0) ; replace nil with 0
                                 %) ; else just eval the token
-                             (take arity @out-stack))))))
+                             (take num-args @out-stack))))))
+      (swap! arg-count #(- % (dec num-args))) ; decrement arg count by (num-args - 1)
       (swap! op-stack pop))))
 
 (defn infix-expression-eval [reversed-expr]
   (let [num-items (count reversed-expr)
         op-stack (atom ())
-        arity (atom 0)
+        arg-count (atom 0)
         out-stack (atom ())]
-    (debug-log ">>> reversed-expr" reversed-expr)
+    (debug-log-detailed ">>> reversed-expr" reversed-expr)
     (dotimes [i num-items]
       (let [token (nth reversed-expr i)]
         (debug/debug-log-detailed "infix-expression-eval token" token)
@@ -138,19 +139,19 @@
           ; if operand, adds it to the operand stack
           (operand? token)
           (do
-            (swap! arity inc)
+            (swap! arg-count inc)
             (swap! out-stack conj (eval-token token)))
 
           ; left parenthesis 
           (= left-p token)
           (do
-            (reset! arity 0)
+            (reset! arg-count 0)
             (swap! op-stack conj token))
 
           ; right parenthesis
           (= right-p token)
           (pop-stack-while!
-             #(not= left-p (peek @op-stack)) op-stack out-stack arity)
+             #(not= left-p (peek @op-stack)) op-stack out-stack arg-count)
 
           ;; comma ; TODO - don't tokenize commas in the first place
           ;;(= comma token)
@@ -161,11 +162,11 @@
 
           (function? token)
           (do
-            (debug/debug-log-detailed "function? is true: arity - token" @arity token)
+            (debug/debug-log-detailed "function? is true: arg-count - token" @arg-count token)
             (swap! op-stack conj token)
             (pop-stack-while!
-             #(function? (peek @op-stack)) op-stack out-stack arity)
-            (swap! arity inc))
+             #(function? (peek @op-stack)) op-stack out-stack arg-count)
+            (swap! arg-count inc))
 
           ;; handles all other operators when not the first one
           (operator? token)
@@ -174,11 +175,11 @@
              #(or (< (precedence token) (precedence (peek @op-stack)))
                   (and (<= (precedence token) (precedence (peek @op-stack)))
                        (= exp token)))
-             op-stack out-stack arity)
+             op-stack out-stack arg-count)
             (swap! op-stack conj token)
-            (swap! arity inc)))))
+            (swap! arg-count inc)))))
     ;; Once all tokens have been processed, pop and eval the stacks while op stack is not empty.
-    (pop-stack-while! #(seq @op-stack) op-stack out-stack arity)
+    (pop-stack-while! #(seq @op-stack) op-stack out-stack arg-count)
     ;; Assuming the expression was a valid one, the last item is the final result.
     (let [peek-result (peek @out-stack)]
       (if (not (nil? peek-result))
@@ -187,7 +188,7 @@
 
 (defn infix-expression-prepare [infix-expression]
   (let [reversed-expr (swap-parentheses (swap-unary-minus (tok/tokenize infix-expression)))]
-    (debug-log "infix-expression was: " infix-expression)
+    (debug-log-detailed "infix-expression was: " infix-expression)
     (do-with-timer "infix-expression-eval" (infix-expression-eval reversed-expr))))
 
 (defn parse-formula [^string formula-str]
