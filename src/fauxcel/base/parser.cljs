@@ -167,14 +167,13 @@
 
           ;; handles all other operators when not the first one
           (operator? token)
-          (do
+          (do            
             (pop-stack-while!
              #(or (< (precedence token) (precedence (peek @op-stack)))
                   (and (<= (precedence token) (precedence (peek @op-stack)))
                        (= exp token)))
              op-stack out-stack arg-count)
-            (swap! op-stack conj token)
-            (swap! arg-count inc)))))
+            (swap! op-stack conj token)))))
     ;; Once all tokens have been processed, pop and eval the stacks while op stack is not empty.
     (pop-stack-while! #(seq @op-stack) op-stack out-stack arg-count)
     ;; Assuming the expression was a valid one, the last item is the final result.
