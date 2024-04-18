@@ -17,7 +17,7 @@
    and surrounded by parentheses. This is done to make unary minus the highest
    priority operator."
   [infix-tokens]
-  (loop [original-tokens (into [] infix-tokens)
+  (loop [original-tokens infix-tokens
          prev-token nil ; nil at start of loop
          prev-token-unary? false ; false at start of loop
          new-tokens []] ; as tokens are processed they are added to vector
@@ -79,7 +79,7 @@
   (loop [remaining expression
          new-expression []]
     (if (empty? remaining)
-      (into () new-expression)
+      new-expression
       (let [token (first remaining)
             new-token (case token
                         left-p right-p
@@ -100,17 +100,17 @@
           func? (function? op-or-fn-token)
           nil-equals-zero? (fn/nil-equals-zero? op-or-fn-token)
           num-args (cond
-                  (and (or func? op?) (= fn-arity 0) (> @arg-count 0)) ; throw exception
+                  (and func? (= fn-arity 0) (> @arg-count 0)) ; throw exception
                   (throw (ex-info (str "Expected 0 arguments but found more token arity fn-arity "
                                        op-or-fn-token " " @arg-count " " fn-arity) {:arity @arg-count}))
-                  (and (or func? op?) (not= fn-arity fn/multi-arity) (< @arg-count fn-arity))
+                  (and func? (not= fn-arity fn/multi-arity) (< @arg-count fn-arity))
                   (throw (ex-info (str "Expected more arguments but found less "
                                        fn-arity " " @arg-count) {:arity @arg-count}))
-                  (and (or func? op?) (not= fn-arity fn/multi-arity) (> @arg-count fn-arity))
+                  (and func? (not= fn-arity fn/multi-arity) (> @arg-count fn-arity))
                   (throw (ex-info (str "Expected less arguments but found more "
                                       fn-arity " " @arg-count) {:arity @arg-count}))
-                  :else
-                  @arg-count)]
+                  op? fn-arity
+                  :else @arg-count)] ; else func? is true, so just use current arg count
       (debug/debug-log-detailed "out-stack before pop-stack-while!" @out-stack)
       (debug/debug-log-detailed "op-stack before pop-stack-while!" @op-stack)
       (debug/debug-log-detailed "nthrest @out-stack num-args" (nthrest @out-stack num-args))
@@ -133,7 +133,7 @@
         out-stack (atom ())]
     (debug-log-detailed ">>> reversed-expr" reversed-expr)
     (dotimes [i num-items]
-      (let [token (nth reversed-expr i)]
+      (let [token (reversed-expr (- num-items i 1))]
         (debug/debug-log-detailed "infix-expression-eval token" token)
         (cond
           ; if operand, adds it to the operand stack
@@ -152,9 +152,6 @@
           (= right-p token)
           (pop-stack-while!
              #(not= left-p (peek @op-stack)) op-stack out-stack arg-count)
-
-          ;; comma ; TODO - don't tokenize commas in the first place
-          ;;(= comma token)
 
           ;; if token is an operator and is the first one found in this expression
           (and (operator? token) (empty? @op-stack))

@@ -7,7 +7,7 @@
 
 (def tokenize-re
   "Regular expression for tokenizing a string expression."
-  (re-pattern (str "\\,|" (str (s/join "|" (keys fn/functions)))
+  (re-pattern (str (s/join "|" (keys fn/functions))
                    "|[[a-zA-Z]{1,2}[0-9]{0,4}[\\:][a-zA-Z]{1,2}[0-9]{0,4}]*|[[0-9]?\\.?[0-9]+]*|[\\/*\\-+^\\(\\)]"
                    "|[[a-zA-Z]{1,2}[0-9]{1,4}]*"
                    "|(?<=\")[^,]*?(?=\")")))
@@ -24,4 +24,4 @@
         expanded-refs (s/replace expression-str
                                  cell-ref-re
                                  #(str (s/join "," (u/expand-cell-range (%1 0)))))]
-    (re-seq tokenize-re (s/upper-case (strip-whitespace expanded-refs)))))
+   (into [] (re-seq tokenize-re (s/upper-case (strip-whitespace expanded-refs))))))
