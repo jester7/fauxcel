@@ -111,9 +111,9 @@
                                       fn-arity " " @arg-count) {:arity @arg-count}))
                   op? fn-arity
                   :else @arg-count)] ; else func? is true, so just use current arg count
-      (debug/debug-log-detailed "out-stack before pop-stack-while!" @out-stack)
-      (debug/debug-log-detailed "op-stack before pop-stack-while!" @op-stack)
-      (debug/debug-log-detailed "nthrest @out-stack num-args" (nthrest @out-stack num-args))
+      (debug/debug-log-detailed "pop-stack-while! op-or-fn-token "
+        "op-stack out-stack arg-count fn-arity" op-or-fn-token "|" @op-stack "|" @out-stack
+        @arg-count "|" @arg-count "|" num-args)
       (when (or func? op?)
         (reset! out-stack
                 (conj
