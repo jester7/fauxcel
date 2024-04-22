@@ -53,12 +53,8 @@
   (cond
     (nil? token-str) false
     (number? token-str) false
+    (operator? token-str) false
     :else (not (nil? (get-function token-str)))))
-
-(defn operator?
-  "Returns true if the token string is an operator."
-  ^boolean [^string token-str]
-  (not (nil? (operators token-str))))
 
 (defn operand?
   "Returns true if the token string is an operand."
