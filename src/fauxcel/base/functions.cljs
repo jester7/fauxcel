@@ -31,12 +31,21 @@
                         "TODAY" {:fn dates/today :precedence 1 :arity 1 :nil-equals-zero? true}
                         "CONCAT" {:fn str :precedence 1 :arity multi-arity :nil-equals-zero? false}})
 
+(declare get-function operator? nil-equals-zero?)
+
 (defn get-function
   "Returns the function associated with the token string. Returns nil if not found."
   [^string token-str]
   (if (nil? token-str)
-    nil
-    (functions (s/upper-case token-str))))
+    nil-equals-zero?
+     (if (operator? token-str)
+       (operators token-str)
+       (functions (s/upper-case token-str)))))
+
+(defn operator?
+  "Returns true if the token string is an operator."
+  ^boolean [^string token-str]
+  (not (nil? (operators token-str))))
 
 (defn function?
   "Returns true if the token string is a function."
