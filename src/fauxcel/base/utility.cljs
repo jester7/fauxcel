@@ -16,6 +16,18 @@
 (defn num-to-char [num]
   (char (+ num 64)))
 
+(defn char-to-num
+  "Converts a character to a number, where A=1, B=2, etc.
+  Converts to uppercase if lowercase character is passed."
+  [char]
+  (let [char
+        (when
+            (and (string? char)
+                 (= (count char) 1))
+                 (s/upper-case char))]
+    (when char
+      (- (.charCodeAt char) 64))))
+
 (defn is-formula? ^boolean [str]
   (= (get str 0) "="))
 
@@ -90,7 +102,7 @@
   ([cell-ref] (row-col-for-cell-ref cell-ref false))
   ([cell-ref col-as-letter?] 
   (let [matches (re-matches c/cell-ref-re cell-ref)
-        col (if col-as-letter? (matches 1) (col-for-el (el-by-id (matches 0))))]
+        col (if col-as-letter? (matches 1) (char-to-num (matches 1)))]
     {:row (js/parseInt (matches 2)) :col col})))
 
 (defn col-label
